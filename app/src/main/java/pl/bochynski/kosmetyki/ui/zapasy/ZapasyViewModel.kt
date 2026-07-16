@@ -64,6 +64,15 @@ class ZapasyViewModel(
         }
     }
 
+    fun cofnijOtwarcie(produkt: ProduktEntity) {
+        if (produkt.status != StatusProduktu.OTWARTE) return
+        viewModelScope.launch {
+            produktRepository.aktualizuj(
+                produkt.copy(status = StatusProduktu.W_ZAPASIE, dataOtwarcia = null)
+            )
+        }
+    }
+
     private fun pasujeDoSzukania(produkt: ProduktEntity, tekst: String): Boolean {
         if (tekst.isBlank()) return true
         val zapytanie = tekst.trim()

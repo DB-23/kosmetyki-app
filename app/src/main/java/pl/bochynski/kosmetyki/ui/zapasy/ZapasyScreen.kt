@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -21,11 +22,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
@@ -57,6 +61,7 @@ fun ZapasyRoute(
         naWybranaKategoria = viewModel::wybierzKategorie,
         naZmianeSzukania = viewModel::ustawSzukajTekst,
         naOznaczOtwarte = viewModel::oznaczOtwarte,
+        naCofnijOtwarcie = viewModel::cofnijOtwarcie,
         modifier = modifier
     )
 }
@@ -68,9 +73,33 @@ fun ZapasyScreen(
     naWybranaKategoria: (Long?) -> Unit,
     naZmianeSzukania: (String) -> Unit,
     naOznaczOtwarte: (ProduktEntity) -> Unit,
+    naCofnijOtwarcie: (ProduktEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val rozwiniete = remember { mutableStateMapOf<String, Boolean>() }
+    var produktDoPotwierdzenia by remember { mutableStateOf<ProduktEntity?>(null) }
+
+    produktDoPotwierdzenia?.let { produkt ->
+        AlertDialog(
+            onDismissRequest = { produktDoPotwierdzenia = null },
+            title = { Text("Cofnąć otwarcie?") },
+            text = {
+                Text(
+                    "Produkt „${budujTytul(produkt)}” zostanie oznaczony jako nieotwarty " +
+                        "i wróci do zapasów. Czy na pewno?"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    naCofnijOtwarcie(produkt)
+                    produktDoPotwierdzenia = null
+                }) { Text("Tak, cofnij") }
+            },
+            dismissButton = {
+                TextButton(onClick = { produktDoPotwierdzenia = null }) { Text("Anuluj") }
+            }
+        )
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Zapasy") })
@@ -122,7 +151,8 @@ fun ZapasyScreen(
                         naToggleRozwiniecia = {
                             rozwiniete[grupa.kluczListy] = !(rozwiniete[grupa.kluczListy] ?: false)
                         },
-                        naOznaczOtwarte = naOznaczOtwarte
+                        naOznaczOtwarte = naOznaczOtwarte,
+                        naProbaCofnieciaOtwarcia = { produktDoPotwierdzenia = it }
                     )
                 }
             }
@@ -143,7 +173,8 @@ private fun KartaGrupy(
     nazwaKategorii: String?,
     rozwinieta: Boolean,
     naToggleRozwiniecia: () -> Unit,
-    naOznaczOtwarte: (ProduktEntity) -> Unit
+    naOznaczOtwarte: (ProduktEntity) -> Unit,
+    naProbaCofnieciaOtwarcia: (ProduktEntity) -> Unit
 ) {
     Column {
         WierszKarty(
@@ -152,7 +183,8 @@ private fun KartaGrupy(
             pokazKategorie = pokazKategorie,
             nazwaKategorii = nazwaKategorii,
             naKlikniecie = if (grupa.liczbaSztuk > 1) naToggleRozwiniecia else null,
-            naOznaczOtwarte = naOznaczOtwarte
+            naOznaczOtwarte = naOznaczOtwarte,
+            naProbaCofnieciaOtwarcia = naProbaCofnieciaOtwarcia
         )
         if (rozwinieta && grupa.liczbaSztuk > 1) {
             Column(
@@ -167,6 +199,7 @@ private fun KartaGrupy(
                         nazwaKategorii = null,
                         naKlikniecie = null,
                         naOznaczOtwarte = naOznaczOtwarte,
+                        naProbaCofnieciaOtwarcia = naProbaCofnieciaOtwarcia,
                         etykietaSztuki = "Sztuka ${indeks + 1}"
                     )
                 }
@@ -183,6 +216,7 @@ private fun WierszKarty(
     nazwaKategorii: String?,
     naKlikniecie: (() -> Unit)?,
     naOznaczOtwarte: (ProduktEntity) -> Unit,
+    naProbaCofnieciaOtwarcia: (ProduktEntity) -> Unit,
     etykietaSztuki: String? = null
 ) {
     val otwarte = produkt.status == StatusProduktu.OTWARTE
@@ -222,8 +256,10 @@ private fun WierszKarty(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Checkbox(
                         checked = otwarte,
-                        enabled = !otwarte,
-                        onCheckedChange = { if (!otwarte) naOznaczOtwarte(produkt) },
+                        enabled = true,
+                        onCheckedChange = { zaznaczone ->
+                            if (zaznaczone) naOznaczOtwarte(produkt) else naProbaCofnieciaOtwarcia(produkt)
+                        },
                         colors = CheckboxDefaults.colors(
                             checkedColor = kolorTekstu,
                             uncheckedColor = kolorTekstu
