@@ -19,5 +19,5 @@ fun koloryDlaPoziomu(poziom: PoziomPilnosci): KoloryKarty = when (poziom) {
     PoziomPilnosci.PILNY -> KoloryKarty(KolorPilneTlo, KolorPilneTekst)
     PoziomPilnosci.WKROTCE -> KoloryKarty(KolorWkrotceTlo, KolorWkrotceTekst)
     PoziomPilnosci.NORMALNY, PoziomPilnosci.BEZ_TERMINU ->
-        KoloryKarty(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+        KoloryKarty(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.onSurface)
 }

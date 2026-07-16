@@ -38,6 +38,12 @@ data class GrupaProduktow(
 ) {
     val reprezentant: ProduktEntity get() = produkty.first()
     val liczbaSztuk: Int get() = produkty.size
+
+    /**
+     * Unikalny klucz dla LazyColumn — sam [klucz] identyczności nie wystarcza, bo te same
+     * atrybuty mogą mieć zarówno nieotwarte, jak i otwarte sztuki (osobne grupy, ten sam klucz).
+     */
+    val kluczListy: String get() = produkty.joinToString(",") { it.id.toString() }
 }
 
 data class ZapasyUiState(

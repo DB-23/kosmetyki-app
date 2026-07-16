@@ -70,7 +70,7 @@ fun ZapasyScreen(
     naOznaczOtwarte: (ProduktEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val rozwiniete = remember { mutableStateMapOf<KluczGrupowania, Boolean>() }
+    val rozwiniete = remember { mutableStateMapOf<String, Boolean>() }
 
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Zapasy") })
@@ -113,14 +113,14 @@ fun ZapasyScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(stan.grupy, key = { it.klucz }) { grupa ->
+                items(stan.grupy, key = { it.kluczListy }) { grupa ->
                     KartaGrupy(
                         grupa = grupa,
                         pokazKategorie = stan.wybranaKategoriaId == null,
                         nazwaKategorii = stan.kategorie.firstOrNull { it.id == grupa.reprezentant.kategoriaId }?.nazwa,
-                        rozwinieta = rozwiniete[grupa.klucz] == true,
+                        rozwinieta = rozwiniete[grupa.kluczListy] == true,
                         naToggleRozwiniecia = {
-                            rozwiniete[grupa.klucz] = !(rozwiniete[grupa.klucz] ?: false)
+                            rozwiniete[grupa.kluczListy] = !(rozwiniete[grupa.kluczListy] ?: false)
                         },
                         naOznaczOtwarte = naOznaczOtwarte
                     )
@@ -235,10 +235,22 @@ private fun WierszKarty(
         }
     }
 
+    val elewacja = CardDefaults.cardElevation(defaultElevation = 2.dp)
     if (naKlikniecie != null) {
-        Card(modifier = Modifier.fillMaxWidth(), onClick = naKlikniecie, colors = koloryKarty, content = { tresc() })
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = naKlikniecie,
+            colors = koloryKarty,
+            elevation = elewacja,
+            content = { tresc() }
+        )
     } else {
-        Card(modifier = Modifier.fillMaxWidth(), colors = koloryKarty, content = { tresc() })
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = koloryKarty,
+            elevation = elewacja,
+            content = { tresc() }
+        )
     }
 }
 
