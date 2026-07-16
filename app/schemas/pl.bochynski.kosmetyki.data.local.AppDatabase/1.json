@@ -1,0 +1,160 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "6cbda99f9e4692b7a74f49bf97a3db5f",
+    "entities": [
+      {
+        "tableName": "kategorie",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nazwa` TEXT NOT NULL, `kolejnosc` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nazwa",
+            "columnName": "nazwa",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kolejnosc",
+            "columnName": "kolejnosc",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "produkty",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `kategoriaId` INTEGER NOT NULL, `marka` TEXT NOT NULL, `seria` TEXT, `linia` TEXT, `nazwa` TEXT NOT NULL, `ean` TEXT, `zdjecieUri` TEXT, `dataWaznosci` TEXT, `okresZuzyciaPoOtwarciuMiesiace` INTEGER, `status` TEXT NOT NULL, `dataOtwarcia` TEXT, `dataZuzycia` TEXT, `dataDodania` TEXT NOT NULL, `notatka` TEXT, FOREIGN KEY(`kategoriaId`) REFERENCES `kategorie`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kategoriaId",
+            "columnName": "kategoriaId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "marka",
+            "columnName": "marka",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seria",
+            "columnName": "seria",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "linia",
+            "columnName": "linia",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nazwa",
+            "columnName": "nazwa",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ean",
+            "columnName": "ean",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "zdjecieUri",
+            "columnName": "zdjecieUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dataWaznosci",
+            "columnName": "dataWaznosci",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "okresZuzyciaPoOtwarciuMiesiace",
+            "columnName": "okresZuzyciaPoOtwarciuMiesiace",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dataOtwarcia",
+            "columnName": "dataOtwarcia",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dataZuzycia",
+            "columnName": "dataZuzycia",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dataDodania",
+            "columnName": "dataDodania",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notatka",
+            "columnName": "notatka",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_produkty_kategoriaId",
+            "unique": false,
+            "columnNames": [
+              "kategoriaId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_produkty_kategoriaId` ON `${TABLE_NAME}` (`kategoriaId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "kategorie",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "kategoriaId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6cbda99f9e4692b7a74f49bf97a3db5f')"
+    ]
+  }
+}
