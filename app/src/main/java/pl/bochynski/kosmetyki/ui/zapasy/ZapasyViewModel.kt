@@ -73,6 +73,15 @@ class ZapasyViewModel(
         }
     }
 
+    fun oznaczZuzyte(produkt: ProduktEntity) {
+        if (produkt.status == StatusProduktu.ZUZYTE) return
+        viewModelScope.launch {
+            produktRepository.aktualizuj(
+                produkt.copy(status = StatusProduktu.ZUZYTE, dataZuzycia = LocalDate.now())
+            )
+        }
+    }
+
     private fun pasujeDoSzukania(produkt: ProduktEntity, tekst: String): Boolean {
         if (tekst.isBlank()) return true
         val zapytanie = tekst.trim()

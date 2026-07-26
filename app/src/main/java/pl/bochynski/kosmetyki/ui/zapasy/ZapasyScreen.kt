@@ -4,22 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -29,7 +20,6 @@ import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,14 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
-import pl.bochynski.kosmetyki.data.local.entity.StatusProduktu
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
-import pl.bochynski.kosmetyki.domain.dniDoKonca
-import pl.bochynski.kosmetyki.domain.poziomPilnosci
-import pl.bochynski.kosmetyki.domain.terminEfektywny
-import pl.bochynski.kosmetyki.ui.common.koloryDlaPoziomu
-import java.time.format.DateTimeFormatter
+import pl.bochynski.kosmetyki.ui.common.DialogCofnijOtwarcie
+import pl.bochynski.kosmetyki.ui.common.WierszKarty
 
 @Composable
 fun ZapasyRoute(
@@ -70,6 +56,7 @@ fun ZapasyRoute(
         naZmianeSzukania = viewModel::ustawSzukajTekst,
         naOznaczOtwarte = viewModel::oznaczOtwarte,
         naCofnijOtwarcie = viewModel::cofnijOtwarcie,
+        naOznaczZuzyte = viewModel::oznaczZuzyte,
         naDodajProdukt = naDodajProdukt,
         naEdytujProdukt = { naEdytujProdukt(it.id) },
         modifier = modifier
@@ -84,6 +71,7 @@ fun ZapasyScreen(
     naZmianeSzukania: (String) -> Unit,
     naOznaczOtwarte: (ProduktEntity) -> Unit,
     naCofnijOtwarcie: (ProduktEntity) -> Unit,
+    naOznaczZuzyte: (ProduktEntity) -> Unit,
     naDodajProdukt: () -> Unit,
     naEdytujProdukt: (ProduktEntity) -> Unit,
     modifier: Modifier = Modifier
@@ -92,24 +80,13 @@ fun ZapasyScreen(
     var produktDoPotwierdzenia by remember { mutableStateOf<ProduktEntity?>(null) }
 
     produktDoPotwierdzenia?.let { produkt ->
-        AlertDialog(
-            onDismissRequest = { produktDoPotwierdzenia = null },
-            title = { Text("Cofnąć otwarcie?") },
-            text = {
-                Text(
-                    "Produkt „${budujTytul(produkt)}” zostanie oznaczony jako nieotwarty " +
-                        "i wróci do zapasów. Czy na pewno?"
-                )
+        DialogCofnijOtwarcie(
+            produkt = produkt,
+            onConfirm = {
+                naCofnijOtwarcie(produkt)
+                produktDoPotwierdzenia = null
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    naCofnijOtwarcie(produkt)
-                    produktDoPotwierdzenia = null
-                }) { Text("Tak, cofnij") }
-            },
-            dismissButton = {
-                TextButton(onClick = { produktDoPotwierdzenia = null }) { Text("Anuluj") }
-            }
+            onDismiss = { produktDoPotwierdzenia = null }
         )
     }
 
@@ -176,6 +153,7 @@ fun ZapasyScreen(
                             },
                             naOznaczOtwarte = naOznaczOtwarte,
                             naProbaCofnieciaOtwarcia = { produktDoPotwierdzenia = it },
+                            naOznaczZuzyte = naOznaczZuzyte,
                             naEdytujProdukt = naEdytujProdukt
                         )
                     }
@@ -200,6 +178,7 @@ private fun KartaGrupy(
     naToggleRozwiniecia: () -> Unit,
     naOznaczOtwarte: (ProduktEntity) -> Unit,
     naProbaCofnieciaOtwarcia: (ProduktEntity) -> Unit,
+    naOznaczZuzyte: (ProduktEntity) -> Unit,
     naEdytujProdukt: (ProduktEntity) -> Unit
 ) {
     Column {
@@ -210,7 +189,8 @@ private fun KartaGrupy(
             nazwaKategorii = nazwaKategorii,
             naKlikniecie = if (grupa.liczbaSztuk > 1) naToggleRozwiniecia else { { naEdytujProdukt(grupa.reprezentant) } },
             naOznaczOtwarte = naOznaczOtwarte,
-            naProbaCofnieciaOtwarcia = naProbaCofnieciaOtwarcia
+            naProbaCofnieciaOtwarcia = naProbaCofnieciaOtwarcia,
+            naOznaczZuzyte = naOznaczZuzyte
         )
         if (rozwinieta && grupa.liczbaSztuk > 1) {
             Column(
@@ -226,121 +206,11 @@ private fun KartaGrupy(
                         naKlikniecie = { naEdytujProdukt(sztuka) },
                         naOznaczOtwarte = naOznaczOtwarte,
                         naProbaCofnieciaOtwarcia = naProbaCofnieciaOtwarcia,
+                        naOznaczZuzyte = naOznaczZuzyte,
                         etykietaSztuki = "Sztuka ${indeks + 1}"
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun WierszKarty(
-    produkt: ProduktEntity,
-    liczbaSztuk: Int,
-    pokazKategorie: Boolean,
-    nazwaKategorii: String?,
-    naKlikniecie: (() -> Unit)?,
-    naOznaczOtwarte: (ProduktEntity) -> Unit,
-    naProbaCofnieciaOtwarcia: (ProduktEntity) -> Unit,
-    etykietaSztuki: String? = null
-) {
-    val otwarte = produkt.status == StatusProduktu.OTWARTE
-    val poziom = poziomPilnosci(produkt.dniDoKonca())
-    val koloryPilnosci = koloryDlaPoziomu(poziom)
-    val kolorTla = if (otwarte) MaterialTheme.colorScheme.surfaceVariant else koloryPilnosci.tlo
-    val kolorTekstu = if (otwarte) MaterialTheme.colorScheme.onSurfaceVariant else koloryPilnosci.tekst
-
-    val koloryKarty = CardDefaults.cardColors(containerColor = kolorTla, contentColor = kolorTekstu)
-    val tresc: @Composable () -> Unit = {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                if (pokazKategorie && nazwaKategorii != null) {
-                    Text(nazwaKategorii, style = MaterialTheme.typography.labelSmall)
-                }
-                if (etykietaSztuki != null) {
-                    Text(etykietaSztuki, style = MaterialTheme.typography.labelSmall)
-                }
-                Row(verticalAlignment = Alignment.Top) {
-                    if (otwarte) {
-                        Icon(
-                            imageVector = Icons.Filled.LockOpen,
-                            contentDescription = "Produkt otwarty",
-                            tint = kolorTekstu,
-                            modifier = Modifier
-                                .padding(top = 3.dp, end = 4.dp)
-                                .size(16.dp)
-                        )
-                    }
-                    Text(
-                        text = budujTytul(produkt),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                budujOpisTerminu(produkt)?.let { opis ->
-                    Text(opis, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-
-            if (liczbaSztuk > 1) {
-                Badge { Text("×$liczbaSztuk") }
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Checkbox(
-                        checked = otwarte,
-                        enabled = true,
-                        onCheckedChange = { zaznaczone ->
-                            if (zaznaczone) naOznaczOtwarte(produkt) else naProbaCofnieciaOtwarcia(produkt)
-                        },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = kolorTekstu,
-                            uncheckedColor = kolorTekstu
-                        )
-                    )
-                    Text("Otwarte", style = MaterialTheme.typography.labelSmall, color = kolorTekstu)
-                }
-            }
-        }
-    }
-
-    val elewacja = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    if (naKlikniecie != null) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = naKlikniecie,
-            colors = koloryKarty,
-            elevation = elewacja,
-            content = { tresc() }
-        )
-    } else {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = koloryKarty,
-            elevation = elewacja,
-            content = { tresc() }
-        )
-    }
-}
-
-private fun budujTytul(produkt: ProduktEntity): String {
-    val naglowek = listOfNotNull(produkt.marka, produkt.seria, produkt.linia)
-        .filter { it.isNotBlank() }
-        .joinToString(" ")
-    return if (naglowek.isBlank()) produkt.nazwa else "$naglowek – ${produkt.nazwa}"
-}
-
-private val FORMAT_DATY = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-
-private fun budujOpisTerminu(produkt: ProduktEntity): String? {
-    val dni = produkt.dniDoKonca() ?: return null
-    val dataTekst = produkt.terminEfektywny()?.format(FORMAT_DATY) ?: return null
-    return when {
-        dni <= 0 -> "Przeterminowany od ${-dni} dni ($dataTekst)"
-        else -> "Ważne do $dataTekst (jeszcze $dni dni)"
     }
 }
