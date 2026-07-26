@@ -11,11 +11,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,20 +39,35 @@ import java.util.Locale
 fun PulpitRoute(
     produktRepository: ProduktRepository,
     naHistorieCen: () -> Unit,
+    naUstawienia: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: PulpitViewModel = viewModel(factory = PulpitViewModelFactory(produktRepository))
     val stan by viewModel.stan.collectAsState()
 
-    PulpitScreen(stan = stan, naHistorieCen = naHistorieCen, modifier = modifier)
+    PulpitScreen(stan = stan, naHistorieCen = naHistorieCen, naUstawienia = naUstawienia, modifier = modifier)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PulpitScreen(stan: PulpitUiState, naHistorieCen: () -> Unit, modifier: Modifier = Modifier) {
+fun PulpitScreen(
+    stan: PulpitUiState,
+    naHistorieCen: () -> Unit,
+    naUstawienia: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Pulpit") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Pulpit") },
+                actions = {
+                    IconButton(onClick = naUstawienia) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Ustawienia")
+                    }
+                }
+            )
+        }
     ) { innerPadding ->
         if (stan.trwaLadowanie) {
             Box(

@@ -25,12 +25,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
+import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
 import pl.bochynski.kosmetyki.ui.archiwum.ArchiwumRoute
 import pl.bochynski.kosmetyki.ui.historiacen.HistoriaCenRoute
 import pl.bochynski.kosmetyki.ui.otwarte.OtwarteRoute
 import pl.bochynski.kosmetyki.ui.produkt.ProduktFormRoute
 import pl.bochynski.kosmetyki.ui.produktdetal.ProduktDetalRoute
 import pl.bochynski.kosmetyki.ui.pulpit.PulpitRoute
+import pl.bochynski.kosmetyki.ui.ustawienia.UstawieniaRoute
 import pl.bochynski.kosmetyki.ui.zapasy.ZapasyRoute
 
 private const val ARG_PRODUKT_ID = "produktId"
@@ -46,6 +48,7 @@ private object KosmetykiRoutes {
     const val PRODUKT_FORM = "$PRODUKT_FORM_BAZA?$ARG_PRODUKT_ID={$ARG_PRODUKT_ID}"
     const val PRODUKT_DETAL_BAZA = "produktDetal"
     const val PRODUKT_DETAL = "$PRODUKT_DETAL_BAZA/{$ARG_PRODUKT_ID}"
+    const val USTAWIENIA = "ustawienia"
 
     fun produktForm(produktId: Long? = null) =
         "$PRODUKT_FORM_BAZA?$ARG_PRODUKT_ID=${produktId ?: BEZ_PRODUKTU}"
@@ -66,6 +69,7 @@ private val POZYCJE_NAWIGACJI = listOf(
 fun KosmetykiNavHost(
     kategoriaRepository: KategoriaRepository,
     produktRepository: ProduktRepository,
+    ustawieniaRepository: UstawieniaRepository,
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
@@ -109,7 +113,14 @@ fun KosmetykiNavHost(
             composable(KosmetykiRoutes.PULPIT) {
                 PulpitRoute(
                     produktRepository = produktRepository,
-                    naHistorieCen = { navController.navigate(KosmetykiRoutes.HISTORIA_CEN) }
+                    naHistorieCen = { navController.navigate(KosmetykiRoutes.HISTORIA_CEN) },
+                    naUstawienia = { navController.navigate(KosmetykiRoutes.USTAWIENIA) }
+                )
+            }
+            composable(KosmetykiRoutes.USTAWIENIA) {
+                UstawieniaRoute(
+                    ustawieniaRepository = ustawieniaRepository,
+                    naWstecz = { navController.popBackStack() }
                 )
             }
             composable(KosmetykiRoutes.HISTORIA_CEN) {

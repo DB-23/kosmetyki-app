@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
                 KosmetykiNavHost(
                     kategoriaRepository = aplikacja.kategoriaRepository,
                     produktRepository = aplikacja.produktRepository,
+                    ustawieniaRepository = aplikacja.ustawieniaRepository,
                     modifier = Modifier.fillMaxSize()
                 )
             }
