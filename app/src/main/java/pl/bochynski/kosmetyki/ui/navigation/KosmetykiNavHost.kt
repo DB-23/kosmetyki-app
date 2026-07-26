@@ -165,7 +165,8 @@ fun KosmetykiNavHost(
                 OtwarteRoute(
                     kategoriaRepository = kategoriaRepository,
                     produktRepository = produktRepository,
-                    naEdytujProdukt = { produktId -> navController.navigate(KosmetykiRoutes.produktDetal(produktId)) }
+                    naEdytujProdukt = { produktId -> navController.navigate(KosmetykiRoutes.produktDetal(produktId)) },
+                    naWstecz = { navController.popBackStack() }
                 )
             }
             composable(KosmetykiRoutes.ARCHIWUM) {

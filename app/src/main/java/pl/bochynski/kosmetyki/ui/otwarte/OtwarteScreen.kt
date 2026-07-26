@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,6 +37,7 @@ fun OtwarteRoute(
     kategoriaRepository: KategoriaRepository,
     produktRepository: ProduktRepository,
     naEdytujProdukt: (Long) -> Unit,
+    naWstecz: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: OtwarteViewModel = viewModel(
@@ -44,6 +49,7 @@ fun OtwarteRoute(
         naCofnijOtwarcie = viewModel::cofnijOtwarcie,
         naOznaczZuzyte = viewModel::oznaczZuzyte,
         naEdytujProdukt = { naEdytujProdukt(it.id) },
+        naWstecz = naWstecz,
         modifier = modifier
     )
 }
@@ -55,6 +61,7 @@ fun OtwarteScreen(
     naCofnijOtwarcie: (ProduktEntity) -> Unit,
     naOznaczZuzyte: (ProduktEntity) -> Unit,
     naEdytujProdukt: (ProduktEntity) -> Unit,
+    naWstecz: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var produktDoPotwierdzenia by remember { mutableStateOf<ProduktEntity?>(null) }
@@ -72,7 +79,16 @@ fun OtwarteScreen(
 
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Otwarte") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Otwarte") },
+                navigationIcon = {
+                    IconButton(onClick = naWstecz) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wstecz")
+                    }
+                }
+            )
+        }
     ) { innerPadding ->
         if (stan.produkty.isEmpty()) {
             Box(
