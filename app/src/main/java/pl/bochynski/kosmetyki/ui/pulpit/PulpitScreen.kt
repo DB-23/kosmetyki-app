@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.domain.PoziomPilnosci
 import pl.bochynski.kosmetyki.ui.common.koloryDlaPoziomu
+import pl.bochynski.kosmetyki.ui.filtrowanalista.RodzajFiltra
 import java.util.Locale
 
 @Composable
@@ -40,12 +41,21 @@ fun PulpitRoute(
     produktRepository: ProduktRepository,
     naHistorieCen: () -> Unit,
     naUstawienia: () -> Unit,
+    naListaFiltrowana: (RodzajFiltra) -> Unit,
+    naOtwarte: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: PulpitViewModel = viewModel(factory = PulpitViewModelFactory(produktRepository))
     val stan by viewModel.stan.collectAsState()
 
-    PulpitScreen(stan = stan, naHistorieCen = naHistorieCen, naUstawienia = naUstawienia, modifier = modifier)
+    PulpitScreen(
+        stan = stan,
+        naHistorieCen = naHistorieCen,
+        naUstawienia = naUstawienia,
+        naListaFiltrowana = naListaFiltrowana,
+        naOtwarte = naOtwarte,
+        modifier = modifier
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +64,8 @@ fun PulpitScreen(
     stan: PulpitUiState,
     naHistorieCen: () -> Unit,
     naUstawienia: () -> Unit,
+    naListaFiltrowana: (RodzajFiltra) -> Unit,
+    naOtwarte: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -87,22 +99,29 @@ fun PulpitScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                NeutralnaKarta(tytul = "Wszystkie kosmetyki", wartosc = stan.liczbaWszystkich.toString())
+                NeutralnaKarta(
+                    tytul = "Wszystkie kosmetyki",
+                    wartosc = stan.liczbaWszystkich.toString(),
+                    naKlikniecie = { naListaFiltrowana(RodzajFiltra.WSZYSTKIE) }
+                )
 
                 LicznikKarta(
                     tytul = "Przeterminowane",
                     liczba = stan.liczbaPrzeterminowanych,
-                    poziom = PoziomPilnosci.PRZETERMINOWANY
+                    poziom = PoziomPilnosci.PRZETERMINOWANY,
+                    naKlikniecie = { naListaFiltrowana(RodzajFiltra.PRZETERMINOWANE) }
                 )
                 LicznikKarta(
                     tytul = "Termin w ciągu 90 dni",
                     liczba = stan.liczbaPilnych,
-                    poziom = PoziomPilnosci.PILNY
+                    poziom = PoziomPilnosci.PILNY,
+                    naKlikniecie = { naListaFiltrowana(RodzajFiltra.PILNE) }
                 )
                 LicznikKarta(
                     tytul = "Termin w ciągu 180 dni",
                     liczba = stan.liczbaWkrotce,
-                    poziom = PoziomPilnosci.WKROTCE
+                    poziom = PoziomPilnosci.WKROTCE,
+                    naKlikniecie = { naListaFiltrowana(RodzajFiltra.WKROTCE) }
                 )
 
                 Text(
@@ -118,12 +137,14 @@ fun PulpitScreen(
                     NeutralnaKarta(
                         tytul = "W zapasie",
                         wartosc = stan.liczbaWZapasie.toString(),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        naKlikniecie = { naListaFiltrowana(RodzajFiltra.W_ZAPASIE) }
                     )
                     NeutralnaKarta(
                         tytul = "Otwarte",
                         wartosc = stan.liczbaOtwartych.toString(),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        naKlikniecie = naOtwarte
                     )
                 }
 
@@ -155,12 +176,15 @@ private fun formatujCene(wartosc: Double): String =
     String.format(LOCALE_PL, "%.2f zł", wartosc)
 
 @Composable
-private fun LicznikKarta(tytul: String, liczba: Int, poziom: PoziomPilnosci) {
+private fun LicznikKarta(
+    tytul: String,
+    liczba: Int,
+    poziom: PoziomPilnosci,
+    naKlikniecie: (() -> Unit)? = null
+) {
     val kolory = koloryDlaPoziomu(poziom)
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = kolory.tlo, contentColor = kolory.tekst)
-    ) {
+    val koloryKarty = CardDefaults.cardColors(containerColor = kolory.tlo, contentColor = kolory.tekst)
+    val tresc: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -169,6 +193,11 @@ private fun LicznikKarta(tytul: String, liczba: Int, poziom: PoziomPilnosci) {
             Text(tytul, style = MaterialTheme.typography.titleMedium)
             Text(liczba.toString(), style = MaterialTheme.typography.displaySmall)
         }
+    }
+    if (naKlikniecie != null) {
+        Card(modifier = Modifier.fillMaxWidth(), onClick = naKlikniecie, colors = koloryKarty, content = { tresc() })
+    } else {
+        Card(modifier = Modifier.fillMaxWidth(), colors = koloryKarty, content = { tresc() })
     }
 }
 
@@ -200,15 +229,14 @@ private fun NeutralnaKarta(
     tytul: String,
     wartosc: String,
     modifier: Modifier = Modifier,
-    styl: TextStyle = MaterialTheme.typography.displaySmall
+    styl: TextStyle = MaterialTheme.typography.displaySmall,
+    naKlikniecie: (() -> Unit)? = null
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    ) {
+    val kolory = CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    val tresc: @Composable () -> Unit = {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -217,5 +245,10 @@ private fun NeutralnaKarta(
             Text(tytul, style = MaterialTheme.typography.titleMedium)
             Text(wartosc, style = styl)
         }
+    }
+    if (naKlikniecie != null) {
+        Card(modifier = modifier.fillMaxWidth(), onClick = naKlikniecie, colors = kolory, content = { tresc() })
+    } else {
+        Card(modifier = modifier.fillMaxWidth(), colors = kolory, content = { tresc() })
     }
 }

@@ -27,6 +27,8 @@ import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
 import pl.bochynski.kosmetyki.ui.archiwum.ArchiwumRoute
+import pl.bochynski.kosmetyki.ui.filtrowanalista.FiltrowanaListaRoute
+import pl.bochynski.kosmetyki.ui.filtrowanalista.RodzajFiltra
 import pl.bochynski.kosmetyki.ui.historiacen.HistoriaCenRoute
 import pl.bochynski.kosmetyki.ui.otwarte.OtwarteRoute
 import pl.bochynski.kosmetyki.ui.produkt.ProduktFormRoute
@@ -36,6 +38,7 @@ import pl.bochynski.kosmetyki.ui.ustawienia.UstawieniaRoute
 import pl.bochynski.kosmetyki.ui.zapasy.ZapasyRoute
 
 private const val ARG_PRODUKT_ID = "produktId"
+private const val ARG_RODZAJ_FILTRA = "rodzajFiltra"
 private const val BEZ_PRODUKTU = -1L
 
 private object KosmetykiRoutes {
@@ -49,11 +52,15 @@ private object KosmetykiRoutes {
     const val PRODUKT_DETAL_BAZA = "produktDetal"
     const val PRODUKT_DETAL = "$PRODUKT_DETAL_BAZA/{$ARG_PRODUKT_ID}"
     const val USTAWIENIA = "ustawienia"
+    const val FILTROWANA_LISTA_BAZA = "filtrowanaLista"
+    const val FILTROWANA_LISTA = "$FILTROWANA_LISTA_BAZA/{$ARG_RODZAJ_FILTRA}"
 
     fun produktForm(produktId: Long? = null) =
         "$PRODUKT_FORM_BAZA?$ARG_PRODUKT_ID=${produktId ?: BEZ_PRODUKTU}"
 
     fun produktDetal(produktId: Long) = "$PRODUKT_DETAL_BAZA/$produktId"
+
+    fun filtrowanaLista(rodzaj: RodzajFiltra) = "$FILTROWANA_LISTA_BAZA/${rodzaj.name}"
 }
 
 private data class PozycjaNawigacji(val trasa: String, val etykieta: String, val ikona: ImageVector)
@@ -107,14 +114,31 @@ fun KosmetykiNavHost(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = KosmetykiRoutes.ZAPASY,
+            startDestination = KosmetykiRoutes.PULPIT,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(KosmetykiRoutes.PULPIT) {
                 PulpitRoute(
                     produktRepository = produktRepository,
                     naHistorieCen = { navController.navigate(KosmetykiRoutes.HISTORIA_CEN) },
-                    naUstawienia = { navController.navigate(KosmetykiRoutes.USTAWIENIA) }
+                    naUstawienia = { navController.navigate(KosmetykiRoutes.USTAWIENIA) },
+                    naListaFiltrowana = { rodzaj -> navController.navigate(KosmetykiRoutes.filtrowanaLista(rodzaj)) },
+                    naOtwarte = { navController.navigate(KosmetykiRoutes.OTWARTE) }
+                )
+            }
+            composable(
+                route = KosmetykiRoutes.FILTROWANA_LISTA,
+                arguments = listOf(navArgument(ARG_RODZAJ_FILTRA) { type = NavType.StringType })
+            ) { backStackEntry ->
+                val rodzaj = backStackEntry.arguments?.getString(ARG_RODZAJ_FILTRA)
+                    ?.let { runCatching { RodzajFiltra.valueOf(it) }.getOrNull() }
+                    ?: RodzajFiltra.WSZYSTKIE
+                FiltrowanaListaRoute(
+                    rodzaj = rodzaj,
+                    kategoriaRepository = kategoriaRepository,
+                    produktRepository = produktRepository,
+                    naWstecz = { navController.popBackStack() },
+                    naEdytujProdukt = { produktId -> navController.navigate(KosmetykiRoutes.produktDetal(produktId)) }
                 )
             }
             composable(KosmetykiRoutes.USTAWIENIA) {
