@@ -2,6 +2,7 @@ package pl.bochynski.kosmetyki.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.Icon
@@ -27,12 +28,14 @@ import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.ui.archiwum.ArchiwumRoute
 import pl.bochynski.kosmetyki.ui.otwarte.OtwarteRoute
 import pl.bochynski.kosmetyki.ui.produkt.ProduktFormRoute
+import pl.bochynski.kosmetyki.ui.pulpit.PulpitRoute
 import pl.bochynski.kosmetyki.ui.zapasy.ZapasyRoute
 
 private const val ARG_PRODUKT_ID = "produktId"
 private const val BEZ_PRODUKTU = -1L
 
 private object KosmetykiRoutes {
+    const val PULPIT = "pulpit"
     const val ZAPASY = "zapasy"
     const val OTWARTE = "otwarte"
     const val ARCHIWUM = "archiwum"
@@ -46,6 +49,7 @@ private object KosmetykiRoutes {
 private data class PozycjaNawigacji(val trasa: String, val etykieta: String, val ikona: ImageVector)
 
 private val POZYCJE_NAWIGACJI = listOf(
+    PozycjaNawigacji(KosmetykiRoutes.PULPIT, "Pulpit", Icons.Filled.Dashboard),
     PozycjaNawigacji(KosmetykiRoutes.ZAPASY, "Zapasy", Icons.Filled.Inventory2),
     PozycjaNawigacji(KosmetykiRoutes.OTWARTE, "Otwarte", Icons.Filled.LockOpen),
     PozycjaNawigacji(KosmetykiRoutes.ARCHIWUM, "Zużyte", Icons.Filled.Delete)
@@ -95,6 +99,9 @@ fun KosmetykiNavHost(
             startDestination = KosmetykiRoutes.ZAPASY,
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable(KosmetykiRoutes.PULPIT) {
+                PulpitRoute(produktRepository = produktRepository)
+            }
             composable(KosmetykiRoutes.ZAPASY) {
                 ZapasyRoute(
                     kategoriaRepository = kategoriaRepository,
