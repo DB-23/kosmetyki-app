@@ -37,11 +37,13 @@ import pl.bochynski.kosmetyki.ui.otwarte.OtwarteRoute
 import pl.bochynski.kosmetyki.ui.produkt.ProduktFormRoute
 import pl.bochynski.kosmetyki.ui.produktdetal.ProduktDetalRoute
 import pl.bochynski.kosmetyki.ui.pulpit.PulpitRoute
+import pl.bochynski.kosmetyki.ui.skaner.SkanerEanRoute
 import pl.bochynski.kosmetyki.ui.ustawienia.UstawieniaRoute
 import pl.bochynski.kosmetyki.ui.zapasy.ZapasyRoute
 
 private const val ARG_PRODUKT_ID = "produktId"
 private const val ARG_RODZAJ_FILTRA = "rodzajFiltra"
+private const val KLUCZ_ZESKANOWANY_EAN = "zeskanowanyEan"
 private const val BEZ_PRODUKTU = -1L
 
 private object KosmetykiRoutes {
@@ -57,6 +59,7 @@ private object KosmetykiRoutes {
     const val USTAWIENIA = "ustawienia"
     const val FILTROWANA_LISTA_BAZA = "filtrowanaLista"
     const val FILTROWANA_LISTA = "$FILTROWANA_LISTA_BAZA/{$ARG_RODZAJ_FILTRA}"
+    const val SKANER_EAN = "skanerEan"
 
     fun produktForm(produktId: Long? = null) =
         "$PRODUKT_FORM_BAZA?$ARG_PRODUKT_ID=${produktId ?: BEZ_PRODUKTU}"
@@ -190,10 +193,27 @@ fun KosmetykiNavHost(
                 )
             ) { backStackEntry ->
                 val produktId = backStackEntry.arguments?.getLong(ARG_PRODUKT_ID) ?: BEZ_PRODUKTU
+                val zeskanowanyEan by backStackEntry.savedStateHandle
+                    .getStateFlow<String?>(KLUCZ_ZESKANOWANY_EAN, null)
+                    .collectAsStateWithLifecycle()
                 ProduktFormRoute(
                     produktId = produktId.takeIf { it != BEZ_PRODUKTU },
                     kategoriaRepository = kategoriaRepository,
                     produktRepository = produktRepository,
+                    naWstecz = { navController.popBackStack() },
+                    naSkanujEan = { navController.navigate(KosmetykiRoutes.SKANER_EAN) },
+                    zeskanowanyEan = zeskanowanyEan,
+                    naObsluzonoSkan = { backStackEntry.savedStateHandle[KLUCZ_ZESKANOWANY_EAN] = null }
+                )
+            }
+            composable(KosmetykiRoutes.SKANER_EAN) {
+                SkanerEanRoute(
+                    naZeskanowano = { kod ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(KLUCZ_ZESKANOWANY_EAN, kod)
+                        navController.popBackStack()
+                    },
                     naWstecz = { navController.popBackStack() }
                 )
             }

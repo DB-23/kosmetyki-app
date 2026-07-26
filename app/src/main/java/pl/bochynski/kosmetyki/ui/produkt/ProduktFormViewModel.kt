@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
 import pl.bochynski.kosmetyki.data.local.entity.KategoriaEntity
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
+import pl.bochynski.kosmetyki.data.remote.OpenBeautyFactsApi
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import java.time.LocalDate
@@ -41,7 +42,9 @@ data class ProduktFormUiState(
     val blad: String? = null,
     val zapisano: Boolean = false,
     val kandydaciUzupelnienia: List<ProduktEntity> = emptyList(),
-    val ulubione: List<ProduktEntity> = emptyList()
+    val ulubione: List<ProduktEntity> = emptyList(),
+    val trwaWyszukiwanieEan: Boolean = false,
+    val komunikatEan: String? = null
 )
 
 class ProduktFormViewModel(
@@ -172,6 +175,28 @@ class ProduktFormViewModel(
         }
     }
     fun ustawEan(wartosc: String) = _stan.update { it.copy(ean = wartosc) }
+
+    fun obsluzZeskanowanyEan(ean: String) {
+        _stan.update { it.copy(ean = ean, trwaWyszukiwanieEan = true, komunikatEan = null) }
+        viewModelScope.launch {
+            val produktZApi = OpenBeautyFactsApi.pobierzProdukt(ean)
+            _stan.update {
+                if (produktZApi == null) {
+                    it.copy(
+                        trwaWyszukiwanieEan = false,
+                        komunikatEan = "Nie znaleziono danych produktu dla tego kodu."
+                    )
+                } else {
+                    it.copy(
+                        marka = it.marka.ifBlank { produktZApi.marka.orEmpty() },
+                        nazwa = it.nazwa.ifBlank { produktZApi.nazwa.orEmpty() },
+                        trwaWyszukiwanieEan = false,
+                        komunikatEan = null
+                    )
+                }
+            }
+        }
+    }
     fun ustawPojemnosc(wartosc: String) = _stan.update { it.copy(pojemnosc = wartosc) }
     fun ustawDateWaznosci(data: LocalDate?) = _stan.update { it.copy(dataWaznosci = data) }
     fun ustawOkresZuzycia(wartosc: String) = _stan.update { it.copy(okresZuzycia = wartosc, blad = null) }

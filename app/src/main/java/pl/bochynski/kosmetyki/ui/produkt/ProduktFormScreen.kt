@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
@@ -65,6 +67,9 @@ fun ProduktFormRoute(
     kategoriaRepository: KategoriaRepository,
     produktRepository: ProduktRepository,
     naWstecz: () -> Unit,
+    naSkanujEan: () -> Unit,
+    zeskanowanyEan: String?,
+    naObsluzonoSkan: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: ProduktFormViewModel = viewModel(
@@ -76,9 +81,17 @@ fun ProduktFormRoute(
         if (stan.zapisano) naWstecz()
     }
 
+    LaunchedEffect(zeskanowanyEan) {
+        if (zeskanowanyEan != null) {
+            viewModel.obsluzZeskanowanyEan(zeskanowanyEan)
+            naObsluzonoSkan()
+        }
+    }
+
     ProduktFormScreen(
         stan = stan,
         naWstecz = naWstecz,
+        naSkanujEan = naSkanujEan,
         naZmianeKategorii = viewModel::ustawKategorie,
         naZmianeMarki = viewModel::ustawMarke,
         naZmianeSerii = viewModel::ustawSerie,
@@ -108,6 +121,7 @@ fun ProduktFormRoute(
 fun ProduktFormScreen(
     stan: ProduktFormUiState,
     naWstecz: () -> Unit,
+    naSkanujEan: () -> Unit,
     naZmianeKategorii: (Long) -> Unit,
     naZmianeMarki: (String) -> Unit,
     naZmianeSerii: (String) -> Unit,
@@ -207,14 +221,39 @@ fun ProduktFormScreen(
                     naZmiane = naZmianeNazwy,
                     naWybierzPodpowiedz = naWybierzPodpowiedzNazwy
                 )
-                OutlinedTextField(
-                    value = stan.ean,
-                    onValueChange = naZmianeEan,
-                    label = { Text("Kod EAN") },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = stan.ean,
+                        onValueChange = naZmianeEan,
+                        label = { Text("Kod EAN") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    IconButton(onClick = naSkanujEan) {
+                        Icon(Icons.Filled.CameraAlt, contentDescription = "Skanuj kod EAN")
+                    }
+                }
+                if (stan.trwaWyszukiwanieEan) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Text("Szukam danych produktu...", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                stan.komunikatEan?.let { komunikat ->
+                    Text(
+                        komunikat,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 OutlinedTextField(
                     value = stan.pojemnosc,
                     onValueChange = naZmianePojemnosci,
