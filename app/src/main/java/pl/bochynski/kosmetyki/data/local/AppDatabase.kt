@@ -16,7 +16,7 @@ import pl.bochynski.kosmetyki.data.seed.DatabaseSeeder
 
 @Database(
     entities = [KategoriaEntity::class, ProduktEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -37,6 +37,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     NAZWA_BAZY
                 )
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .addCallback(SeedCallback(context.applicationContext, zasiegAplikacji))
                     .build()
                     .also { INSTANCE = it }

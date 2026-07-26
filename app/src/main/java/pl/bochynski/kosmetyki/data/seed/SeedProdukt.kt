@@ -1,6 +1,7 @@
 package pl.bochynski.kosmetyki.data.seed
 
 import org.json.JSONObject
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
 import pl.bochynski.kosmetyki.data.local.entity.StatusProduktu
 import java.time.LocalDate
@@ -23,7 +24,8 @@ data class SeedProdukt(
         linia = linia,
         nazwa = kosmetyk,
         dataWaznosci = dataWaznosci,
-        okresZuzyciaPoOtwarciuMiesiace = okresZuzyciaMiesiace,
+        okresZuzyciaPoOtwarciu = okresZuzyciaMiesiace,
+        jednostkaOkresuZuzycia = JednostkaOkresuZuzycia.MIESIACE,
         status = if (otwarte) StatusProduktu.OTWARTE else StatusProduktu.W_ZAPASIE,
         dataOtwarcia = dataOtwarcia,
         dataDodania = LocalDate.now()

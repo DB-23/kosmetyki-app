@@ -1,5 +1,6 @@
 package pl.bochynski.kosmetyki.ui.zapasy
 
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
 import java.time.LocalDate
 
@@ -16,6 +17,7 @@ data class KluczGrupowania(
     val ean: String?,
     val dataWaznosci: LocalDate?,
     val pao: Int?,
+    val jednostkaPao: JednostkaOkresuZuzycia,
     val notatka: String?
 )
 
@@ -27,7 +29,8 @@ fun ProduktEntity.kluczGrupowania() = KluczGrupowania(
     nazwa = nazwa,
     ean = ean,
     dataWaznosci = dataWaznosci,
-    pao = okresZuzyciaPoOtwarciuMiesiace,
+    pao = okresZuzyciaPoOtwarciu,
+    jednostkaPao = jednostkaOkresuZuzycia,
     notatka = notatka
 )
 

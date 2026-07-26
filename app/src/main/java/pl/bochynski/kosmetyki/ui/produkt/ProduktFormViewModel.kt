@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
 import pl.bochynski.kosmetyki.data.local.entity.KategoriaEntity
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
@@ -26,7 +27,8 @@ data class ProduktFormUiState(
     val nazwa: String = "",
     val ean: String = "",
     val dataWaznosci: LocalDate? = null,
-    val paoMiesiace: String = "",
+    val okresZuzycia: String = "",
+    val jednostkaOkresuZuzycia: JednostkaOkresuZuzycia = JednostkaOkresuZuzycia.MIESIACE,
     val notatka: String = "",
     val liczbaSztuk: String = "1",
     val blad: String? = null,
@@ -65,7 +67,8 @@ class ProduktFormViewModel(
                             nazwa = produkt.nazwa,
                             ean = produkt.ean.orEmpty(),
                             dataWaznosci = produkt.dataWaznosci,
-                            paoMiesiace = produkt.okresZuzyciaPoOtwarciuMiesiace?.toString().orEmpty(),
+                            okresZuzycia = produkt.okresZuzyciaPoOtwarciu?.toString().orEmpty(),
+                            jednostkaOkresuZuzycia = produkt.jednostkaOkresuZuzycia,
                             notatka = produkt.notatka.orEmpty()
                         )
                     }
@@ -85,7 +88,9 @@ class ProduktFormViewModel(
     fun ustawNazwe(wartosc: String) = _stan.update { it.copy(nazwa = wartosc, blad = null) }
     fun ustawEan(wartosc: String) = _stan.update { it.copy(ean = wartosc) }
     fun ustawDateWaznosci(data: LocalDate?) = _stan.update { it.copy(dataWaznosci = data) }
-    fun ustawPao(wartosc: String) = _stan.update { it.copy(paoMiesiace = wartosc, blad = null) }
+    fun ustawOkresZuzycia(wartosc: String) = _stan.update { it.copy(okresZuzycia = wartosc, blad = null) }
+    fun ustawJednostkeOkresu(jednostka: JednostkaOkresuZuzycia) =
+        _stan.update { it.copy(jednostkaOkresuZuzycia = jednostka) }
     fun ustawNotatke(wartosc: String) = _stan.update { it.copy(notatka = wartosc) }
     fun ustawLiczbeSztuk(wartosc: String) = _stan.update { it.copy(liczbaSztuk = wartosc, blad = null) }
 
@@ -104,8 +109,8 @@ class ProduktFormViewModel(
             _stan.update { it.copy(blad = "Podaj nazwę produktu") }
             return
         }
-        val pao = aktualny.paoMiesiace.trim().takeIf { it.isNotBlank() }?.toIntOrNull()
-        if (aktualny.paoMiesiace.isNotBlank() && pao == null) {
+        val okresZuzycia = aktualny.okresZuzycia.trim().takeIf { it.isNotBlank() }?.toIntOrNull()
+        if (aktualny.okresZuzycia.isNotBlank() && okresZuzycia == null) {
             _stan.update { it.copy(blad = "Okres zużycia po otwarciu musi być liczbą całkowitą") }
             return
         }
@@ -126,7 +131,8 @@ class ProduktFormViewModel(
                 ean = aktualny.ean.trim().ifBlank { null },
                 zdjecieUri = oryginalnyProdukt?.zdjecieUri,
                 dataWaznosci = aktualny.dataWaznosci,
-                okresZuzyciaPoOtwarciuMiesiace = pao,
+                okresZuzyciaPoOtwarciu = okresZuzycia,
+                jednostkaOkresuZuzycia = aktualny.jednostkaOkresuZuzycia,
                 notatka = aktualny.notatka.trim().ifBlank { null }
             )
 

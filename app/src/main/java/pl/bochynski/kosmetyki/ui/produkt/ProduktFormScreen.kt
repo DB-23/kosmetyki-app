@@ -24,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import java.time.Instant
@@ -80,7 +82,8 @@ fun ProduktFormRoute(
         naZmianeNazwy = viewModel::ustawNazwe,
         naZmianeEan = viewModel::ustawEan,
         naZmianeDatyWaznosci = viewModel::ustawDateWaznosci,
-        naZmianePao = viewModel::ustawPao,
+        naZmianeOkresuZuzycia = viewModel::ustawOkresZuzycia,
+        naZmianeJednostki = viewModel::ustawJednostkeOkresu,
         naZmianeNotatki = viewModel::ustawNotatke,
         naZmianeLiczbySztuk = viewModel::ustawLiczbeSztuk,
         naZapisz = viewModel::zapisz,
@@ -100,7 +103,8 @@ fun ProduktFormScreen(
     naZmianeNazwy: (String) -> Unit,
     naZmianeEan: (String) -> Unit,
     naZmianeDatyWaznosci: (LocalDate?) -> Unit,
-    naZmianePao: (String) -> Unit,
+    naZmianeOkresuZuzycia: (String) -> Unit,
+    naZmianeJednostki: (JednostkaOkresuZuzycia) -> Unit,
     naZmianeNotatki: (String) -> Unit,
     naZmianeLiczbySztuk: (String) -> Unit,
     naZapisz: () -> Unit,
@@ -184,13 +188,25 @@ fun ProduktFormScreen(
                 PoleDatyWaznosci(data = stan.dataWaznosci, naZmiane = naZmianeDatyWaznosci)
 
                 OutlinedTextField(
-                    value = stan.paoMiesiace,
-                    onValueChange = naZmianePao,
-                    label = { Text("Okres zużycia po otwarciu (miesiące)") },
+                    value = stan.okresZuzycia,
+                    onValueChange = naZmianeOkresuZuzycia,
+                    label = { Text("Okres zużycia po otwarciu") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = stan.jednostkaOkresuZuzycia == JednostkaOkresuZuzycia.MIESIACE,
+                        onClick = { naZmianeJednostki(JednostkaOkresuZuzycia.MIESIACE) },
+                        label = { Text("Miesiące") }
+                    )
+                    FilterChip(
+                        selected = stan.jednostkaOkresuZuzycia == JednostkaOkresuZuzycia.DNI,
+                        onClick = { naZmianeJednostki(JednostkaOkresuZuzycia.DNI) },
+                        label = { Text("Dni") }
+                    )
+                }
 
                 OutlinedTextField(
                     value = stan.notatka,
