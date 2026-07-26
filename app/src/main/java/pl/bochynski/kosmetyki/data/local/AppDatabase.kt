@@ -16,7 +16,7 @@ import pl.bochynski.kosmetyki.data.seed.DatabaseSeeder
 
 @Database(
     entities = [KategoriaEntity::class, ProduktEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

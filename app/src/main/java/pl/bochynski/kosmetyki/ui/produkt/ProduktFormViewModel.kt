@@ -26,9 +26,14 @@ data class ProduktFormUiState(
     val linia: String = "",
     val nazwa: String = "",
     val ean: String = "",
+    val pojemnosc: String = "",
     val dataWaznosci: LocalDate? = null,
     val okresZuzycia: String = "",
     val jednostkaOkresuZuzycia: JednostkaOkresuZuzycia = JednostkaOkresuZuzycia.MIESIACE,
+    val dataZakupu: LocalDate? = null,
+    val cenaZakupu: String = "",
+    val miejsceZakupu: String = "",
+    val podpowiedziMiejsc: List<String> = emptyList(),
     val notatka: String = "",
     val liczbaSztuk: String = "1",
     val blad: String? = null,
@@ -52,6 +57,11 @@ class ProduktFormViewModel(
                 _stan.update { it.copy(kategorie = kategorie) }
             }
         }
+        viewModelScope.launch {
+            produktRepository.obserwujMiejscaZakupu().collect { miejsca ->
+                _stan.update { it.copy(podpowiedziMiejsc = miejsca) }
+            }
+        }
         if (produktId != null) {
             viewModelScope.launch {
                 val produkt = produktRepository.obserwujProduktPoId(produktId).first()
@@ -66,9 +76,13 @@ class ProduktFormViewModel(
                             linia = produkt.linia.orEmpty(),
                             nazwa = produkt.nazwa,
                             ean = produkt.ean.orEmpty(),
+                            pojemnosc = produkt.pojemnosc.orEmpty(),
                             dataWaznosci = produkt.dataWaznosci,
                             okresZuzycia = produkt.okresZuzyciaPoOtwarciu?.toString().orEmpty(),
                             jednostkaOkresuZuzycia = produkt.jednostkaOkresuZuzycia,
+                            dataZakupu = produkt.dataZakupu,
+                            cenaZakupu = produkt.cenaZakupu?.toString().orEmpty(),
+                            miejsceZakupu = produkt.miejsceZakupu.orEmpty(),
                             notatka = produkt.notatka.orEmpty()
                         )
                     }
@@ -87,10 +101,14 @@ class ProduktFormViewModel(
     fun ustawLinie(wartosc: String) = _stan.update { it.copy(linia = wartosc) }
     fun ustawNazwe(wartosc: String) = _stan.update { it.copy(nazwa = wartosc, blad = null) }
     fun ustawEan(wartosc: String) = _stan.update { it.copy(ean = wartosc) }
+    fun ustawPojemnosc(wartosc: String) = _stan.update { it.copy(pojemnosc = wartosc) }
     fun ustawDateWaznosci(data: LocalDate?) = _stan.update { it.copy(dataWaznosci = data) }
     fun ustawOkresZuzycia(wartosc: String) = _stan.update { it.copy(okresZuzycia = wartosc, blad = null) }
     fun ustawJednostkeOkresu(jednostka: JednostkaOkresuZuzycia) =
         _stan.update { it.copy(jednostkaOkresuZuzycia = jednostka) }
+    fun ustawDateZakupu(data: LocalDate?) = _stan.update { it.copy(dataZakupu = data) }
+    fun ustawCeneZakupu(wartosc: String) = _stan.update { it.copy(cenaZakupu = wartosc, blad = null) }
+    fun ustawMiejsceZakupu(wartosc: String) = _stan.update { it.copy(miejsceZakupu = wartosc) }
     fun ustawNotatke(wartosc: String) = _stan.update { it.copy(notatka = wartosc) }
     fun ustawLiczbeSztuk(wartosc: String) = _stan.update { it.copy(liczbaSztuk = wartosc, blad = null) }
 
@@ -114,6 +132,11 @@ class ProduktFormViewModel(
             _stan.update { it.copy(blad = "Okres zużycia po otwarciu musi być liczbą całkowitą") }
             return
         }
+        val cenaZakupu = aktualny.cenaZakupu.trim().replace(',', '.').takeIf { it.isNotBlank() }?.toDoubleOrNull()
+        if (aktualny.cenaZakupu.isNotBlank() && cenaZakupu == null) {
+            _stan.update { it.copy(blad = "Cena zakupu musi być liczbą") }
+            return
+        }
         val liczbaSztuk = if (aktualny.trybEdycji) 1 else aktualny.liczbaSztuk.trim().toIntOrNull()
         if (!aktualny.trybEdycji && (liczbaSztuk == null || liczbaSztuk < 1)) {
             _stan.update { it.copy(blad = "Liczba sztuk musi być liczbą całkowitą większą od zera") }
@@ -130,9 +153,13 @@ class ProduktFormViewModel(
                 nazwa = aktualny.nazwa.trim(),
                 ean = aktualny.ean.trim().ifBlank { null },
                 zdjecieUri = oryginalnyProdukt?.zdjecieUri,
+                pojemnosc = aktualny.pojemnosc.trim().ifBlank { null },
                 dataWaznosci = aktualny.dataWaznosci,
                 okresZuzyciaPoOtwarciu = okresZuzycia,
                 jednostkaOkresuZuzycia = aktualny.jednostkaOkresuZuzycia,
+                dataZakupu = aktualny.dataZakupu,
+                cenaZakupu = cenaZakupu,
+                miejsceZakupu = aktualny.miejsceZakupu.trim().ifBlank { null },
                 notatka = aktualny.notatka.trim().ifBlank { null }
             )
 

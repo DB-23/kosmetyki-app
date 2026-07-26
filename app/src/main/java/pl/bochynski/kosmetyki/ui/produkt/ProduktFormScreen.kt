@@ -81,9 +81,13 @@ fun ProduktFormRoute(
         naZmianeLinii = viewModel::ustawLinie,
         naZmianeNazwy = viewModel::ustawNazwe,
         naZmianeEan = viewModel::ustawEan,
+        naZmianePojemnosci = viewModel::ustawPojemnosc,
         naZmianeDatyWaznosci = viewModel::ustawDateWaznosci,
         naZmianeOkresuZuzycia = viewModel::ustawOkresZuzycia,
         naZmianeJednostki = viewModel::ustawJednostkeOkresu,
+        naZmianeDatyZakupu = viewModel::ustawDateZakupu,
+        naZmianeCenyZakupu = viewModel::ustawCeneZakupu,
+        naZmianeMiejscaZakupu = viewModel::ustawMiejsceZakupu,
         naZmianeNotatki = viewModel::ustawNotatke,
         naZmianeLiczbySztuk = viewModel::ustawLiczbeSztuk,
         naZapisz = viewModel::zapisz,
@@ -102,9 +106,13 @@ fun ProduktFormScreen(
     naZmianeLinii: (String) -> Unit,
     naZmianeNazwy: (String) -> Unit,
     naZmianeEan: (String) -> Unit,
+    naZmianePojemnosci: (String) -> Unit,
     naZmianeDatyWaznosci: (LocalDate?) -> Unit,
     naZmianeOkresuZuzycia: (String) -> Unit,
     naZmianeJednostki: (JednostkaOkresuZuzycia) -> Unit,
+    naZmianeDatyZakupu: (LocalDate?) -> Unit,
+    naZmianeCenyZakupu: (String) -> Unit,
+    naZmianeMiejscaZakupu: (String) -> Unit,
     naZmianeNotatki: (String) -> Unit,
     naZmianeLiczbySztuk: (String) -> Unit,
     naZapisz: () -> Unit,
@@ -184,8 +192,16 @@ fun ProduktFormScreen(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
+                OutlinedTextField(
+                    value = stan.pojemnosc,
+                    onValueChange = naZmianePojemnosci,
+                    label = { Text("Pojemność") },
+                    placeholder = { Text("np. 50 ml") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
 
-                PoleDatyWaznosci(data = stan.dataWaznosci, naZmiane = naZmianeDatyWaznosci)
+                PoleDaty(etykieta = "Data ważności", data = stan.dataWaznosci, naZmiane = naZmianeDatyWaznosci)
 
                 OutlinedTextField(
                     value = stan.okresZuzycia,
@@ -207,6 +223,23 @@ fun ProduktFormScreen(
                         label = { Text("Dni") }
                     )
                 }
+
+                PoleDaty(etykieta = "Data zakupu", data = stan.dataZakupu, naZmiane = naZmianeDatyZakupu)
+
+                OutlinedTextField(
+                    value = stan.cenaZakupu,
+                    onValueChange = naZmianeCenyZakupu,
+                    label = { Text("Cena zakupu") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+
+                PoleMiejscaZakupu(
+                    wartosc = stan.miejsceZakupu,
+                    podpowiedzi = stan.podpowiedziMiejsc,
+                    naZmiane = naZmianeMiejscaZakupu
+                )
 
                 OutlinedTextField(
                     value = stan.notatka,
@@ -283,12 +316,12 @@ private val FORMAT_DATY = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PoleDatyWaznosci(data: LocalDate?, naZmiane: (LocalDate?) -> Unit) {
+private fun PoleDaty(etykieta: String, data: LocalDate?, naZmiane: (LocalDate?) -> Unit) {
     var pokazDialog by remember { mutableStateOf(false) }
 
     Column {
         Text(
-            "Data ważności",
+            etykieta,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -331,6 +364,54 @@ private fun PoleDatyWaznosci(data: LocalDate?, naZmiane: (LocalDate?) -> Unit) {
             }
         ) {
             DatePicker(state = stanPickera)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PoleMiejscaZakupu(
+    wartosc: String,
+    podpowiedzi: List<String>,
+    naZmiane: (String) -> Unit
+) {
+    var rozwiniete by remember { mutableStateOf(false) }
+    val przefiltrowane = podpowiedzi.filter {
+        it.contains(wartosc, ignoreCase = true) && !it.equals(wartosc, ignoreCase = true)
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = rozwiniete && przefiltrowane.isNotEmpty(),
+        onExpandedChange = { rozwiniete = it }
+    ) {
+        OutlinedTextField(
+            value = wartosc,
+            onValueChange = {
+                naZmiane(it)
+                rozwiniete = true
+            },
+            label = { Text("Miejsce zakupu") },
+            placeholder = { Text("np. Rossmann") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+            singleLine = true
+        )
+        if (przefiltrowane.isNotEmpty()) {
+            ExposedDropdownMenu(
+                expanded = rozwiniete,
+                onDismissRequest = { rozwiniete = false }
+            ) {
+                przefiltrowane.forEach { miejsce ->
+                    DropdownMenuItem(
+                        text = { Text(miejsce) },
+                        onClick = {
+                            naZmiane(miejsce)
+                            rozwiniete = false
+                        }
+                    )
+                }
+            }
         }
     }
 }

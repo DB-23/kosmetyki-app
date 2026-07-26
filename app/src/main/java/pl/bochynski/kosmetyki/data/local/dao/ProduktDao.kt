@@ -37,4 +37,10 @@ interface ProduktDao {
 
     @Query("SELECT COUNT(*) FROM produkty")
     suspend fun liczbaProduktow(): Int
+
+    @Query(
+        "SELECT DISTINCT miejsceZakupu FROM produkty " +
+            "WHERE miejsceZakupu IS NOT NULL ORDER BY miejsceZakupu"
+    )
+    fun obserwujMiejscaZakupu(): Flow<List<String>>
 }

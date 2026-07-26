@@ -28,6 +28,7 @@ data class ProduktEntity(
     val nazwa: String,
     val ean: String? = null,
     val zdjecieUri: String? = null,
+    val pojemnosc: String? = null,
     val dataWaznosci: LocalDate? = null,
     val okresZuzyciaPoOtwarciu: Int? = null,
     val jednostkaOkresuZuzycia: JednostkaOkresuZuzycia = JednostkaOkresuZuzycia.MIESIACE,
@@ -35,5 +36,8 @@ data class ProduktEntity(
     val dataOtwarcia: LocalDate? = null,
     val dataZuzycia: LocalDate? = null,
     val dataDodania: LocalDate = LocalDate.now(),
+    val dataZakupu: LocalDate? = null,
+    val cenaZakupu: Double? = null,
+    val miejsceZakupu: String? = null,
     val notatka: String? = null
 )
