@@ -40,7 +40,8 @@ data class ProduktFormUiState(
     val liczbaSztuk: String = "1",
     val blad: String? = null,
     val zapisano: Boolean = false,
-    val kandydaciUzupelnienia: List<ProduktEntity> = emptyList()
+    val kandydaciUzupelnienia: List<ProduktEntity> = emptyList(),
+    val ulubione: List<ProduktEntity> = emptyList()
 )
 
 class ProduktFormViewModel(
@@ -73,6 +74,11 @@ class ProduktFormViewModel(
         viewModelScope.launch {
             produktRepository.obserwujNazwy().collect { nazwy ->
                 _stan.update { it.copy(podpowiedziNazw = nazwy) }
+            }
+        }
+        viewModelScope.launch {
+            produktRepository.obserwujUlubione().collect { ulubione ->
+                _stan.update { it.copy(ulubione = ulubione) }
             }
         }
         if (produktId != null) {
@@ -148,6 +154,23 @@ class ProduktFormViewModel(
     }
 
     fun odrzucUzupelnienieDanych() = _stan.update { it.copy(kandydaciUzupelnienia = emptyList()) }
+
+    fun wybierzZUlubionych(produkt: ProduktEntity) {
+        _stan.update {
+            it.copy(
+                kategoriaId = produkt.kategoriaId,
+                marka = produkt.marka,
+                seria = produkt.seria.orEmpty(),
+                linia = produkt.linia.orEmpty(),
+                nazwa = produkt.nazwa,
+                ean = produkt.ean.orEmpty(),
+                pojemnosc = produkt.pojemnosc.orEmpty(),
+                okresZuzycia = produkt.okresZuzyciaPoOtwarciu?.toString().orEmpty(),
+                jednostkaOkresuZuzycia = produkt.jednostkaOkresuZuzycia,
+                blad = null
+            )
+        }
+    }
     fun ustawEan(wartosc: String) = _stan.update { it.copy(ean = wartosc) }
     fun ustawPojemnosc(wartosc: String) = _stan.update { it.copy(pojemnosc = wartosc) }
     fun ustawDateWaznosci(data: LocalDate?) = _stan.update { it.copy(dataWaznosci = data) }

@@ -27,12 +27,15 @@ data class KandydatHistorii(
         }
 }
 
-data class PunktCeny(val data: LocalDate, val cena: Double)
+data class PunktCeny(val data: LocalDate, val cena: Double, val miejsceZakupu: String?)
 
 data class HistoriaCenUiState(
     val kandydaci: List<KandydatHistorii> = emptyList(),
     val wybrany: KandydatHistorii? = null,
     val punkty: List<PunktCeny> = emptyList(),
+    val liczbaSztuk: Int = 0,
+    val sredniaCena: Double? = null,
+    val najczestszeMiejsce: String? = null,
     val trwaLadowanie: Boolean = true
 )
 
@@ -58,28 +61,39 @@ class HistoriaCenViewModel(
                     .distinct()
                     .sortedWith(compareBy({ it.marka }, { it.nazwa }))
                 val wybrany = _stan.value.wybrany?.takeIf { it in kandydaci } ?: kandydaci.firstOrNull()
-                _stan.update {
-                    it.copy(
-                        kandydaci = kandydaci,
-                        wybrany = wybrany,
-                        punkty = punktyDla(wybrany),
-                        trwaLadowanie = false
-                    )
-                }
+                _stan.update { it.copy(kandydaci = kandydaci, trwaLadowanie = false) }
+                ustawStatystykiDla(wybrany)
             }
         }
     }
 
-    fun wybierzProdukt(kandydat: KandydatHistorii) {
-        _stan.update { it.copy(wybrany = kandydat, punkty = punktyDla(kandydat)) }
-    }
+    fun wybierzProdukt(kandydat: KandydatHistorii) = ustawStatystykiDla(kandydat)
 
-    private fun punktyDla(kandydat: KandydatHistorii?): List<PunktCeny> {
-        if (kandydat == null) return emptyList()
-        return wszystkieProdukty
-            .filter { kandydat.odpowiadaProduktowi(it) && it.cenaZakupu != null && it.dataZakupu != null }
-            .map { PunktCeny(it.dataZakupu!!, it.cenaZakupu!!) }
+    private fun ustawStatystykiDla(kandydat: KandydatHistorii?) {
+        val dopasowane = if (kandydat == null) {
+            emptyList()
+        } else {
+            wszystkieProdukty.filter { kandydat.odpowiadaProduktowi(it) }
+        }
+        val punkty = dopasowane
+            .filter { it.cenaZakupu != null && it.dataZakupu != null }
+            .map { PunktCeny(it.dataZakupu!!, it.cenaZakupu!!, it.miejsceZakupu) }
             .sortedBy { it.data }
+        val sredniaCena = punkty.map { it.cena }.takeIf { it.isNotEmpty() }?.let { it.sum() / it.size }
+        val najczestszeMiejsce = punkty
+            .mapNotNull { it.miejsceZakupu?.takeIf { m -> m.isNotBlank() } }
+            .groupBy { it }
+            .maxByOrNull { it.value.size }
+            ?.key
+        _stan.update {
+            it.copy(
+                wybrany = kandydat,
+                punkty = punkty,
+                liczbaSztuk = dopasowane.size,
+                sredniaCena = sredniaCena,
+                najczestszeMiejsce = najczestszeMiejsce
+            )
+        }
     }
 }
 

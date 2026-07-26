@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -85,6 +87,7 @@ fun ProduktFormRoute(
         naWybierzPodpowiedzNazwy = viewModel::wybierzPodpowiedzNazwy,
         naWybierzKandydataUzupelnienia = viewModel::uzupelnijZKandydata,
         naOdrzucUzupelnienie = viewModel::odrzucUzupelnienieDanych,
+        naWybierzZUlubionych = viewModel::wybierzZUlubionych,
         naZmianeEan = viewModel::ustawEan,
         naZmianePojemnosci = viewModel::ustawPojemnosc,
         naZmianeDatyWaznosci = viewModel::ustawDateWaznosci,
@@ -113,6 +116,7 @@ fun ProduktFormScreen(
     naWybierzPodpowiedzNazwy: (String) -> Unit,
     naWybierzKandydataUzupelnienia: (ProduktEntity) -> Unit,
     naOdrzucUzupelnienie: () -> Unit,
+    naWybierzZUlubionych: (ProduktEntity) -> Unit,
     naZmianeEan: (String) -> Unit,
     naZmianePojemnosci: (String) -> Unit,
     naZmianeDatyWaznosci: (LocalDate?) -> Unit,
@@ -126,6 +130,8 @@ fun ProduktFormScreen(
     naZapisz: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var pokazDialogUlubionych by remember { mutableStateOf(false) }
+
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -162,6 +168,16 @@ fun ProduktFormScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                if (!stan.trybEdycji && stan.ulubione.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = { pokazDialogUlubionych = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.Star, contentDescription = null)
+                        Text(" Wybierz z ulubionych")
+                    }
+                }
+
                 PoleKategorii(stan = stan, naZmianeKategorii = naZmianeKategorii)
 
                 PoleZAutouzupelnianiem(
@@ -325,6 +341,31 @@ fun ProduktFormScreen(
             )
         }
     }
+
+    if (pokazDialogUlubionych) {
+        AlertDialog(
+            onDismissRequest = { pokazDialogUlubionych = false },
+            title = { Text("Wybierz z ulubionych") },
+            text = {
+                Column {
+                    stan.ulubione.forEach { produkt ->
+                        KandydatUzupelnienia(
+                            kandydat = produkt,
+                            nazwaKategorii = stan.kategorie.firstOrNull { it.id == produkt.kategoriaId }?.nazwa,
+                            naKlikniecie = {
+                                naWybierzZUlubionych(produkt)
+                                pokazDialogUlubionych = false
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { pokazDialogUlubionych = false }) { Text("Zamknij") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -333,9 +374,13 @@ private fun KandydatUzupelnienia(
     nazwaKategorii: String?,
     naKlikniecie: () -> Unit
 ) {
-    val szczegoly = listOfNotNull(
+    val naglowek = listOfNotNull(
+        kandydat.marka.takeIf { it.isNotBlank() },
         kandydat.seria?.takeIf { it.isNotBlank() },
-        kandydat.linia?.takeIf { it.isNotBlank() },
+        kandydat.linia?.takeIf { it.isNotBlank() }
+    ).joinToString(" ")
+    val tytul = if (naglowek.isBlank()) kandydat.nazwa else "$naglowek – ${kandydat.nazwa}"
+    val szczegoly = listOfNotNull(
         nazwaKategorii,
         kandydat.pojemnosc?.takeIf { it.isNotBlank() }
     ).joinToString(" · ")
@@ -346,7 +391,7 @@ private fun KandydatUzupelnienia(
             .clickable(onClick = naKlikniecie)
             .padding(vertical = 10.dp)
     ) {
-        Text(kandydat.marka, style = MaterialTheme.typography.bodyLarge)
+        Text(tytul, style = MaterialTheme.typography.bodyLarge)
         if (szczegoly.isNotBlank()) {
             Text(
                 szczegoly,

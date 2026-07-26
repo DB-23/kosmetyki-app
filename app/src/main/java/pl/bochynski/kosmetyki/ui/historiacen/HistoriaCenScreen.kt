@@ -4,16 +4,20 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,7 +41,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
@@ -116,6 +122,26 @@ fun HistoriaCenScreen(
                     kandydaci = stan.kandydaci,
                     wybrany = stan.wybrany,
                     naWybierz = naWybierzProdukt
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatystykaKarta(
+                        tytul = "Kupiona ilość",
+                        wartosc = stan.liczbaSztuk.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatystykaKarta(
+                        tytul = "Średnia cena",
+                        wartosc = stan.sredniaCena?.let { formatujCene(it) } ?: "Brak danych",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                StatystykaKarta(
+                    tytul = "Najczęstsze miejsce zakupu",
+                    wartosc = stan.najczestszeMiejsce ?: "Brak danych"
                 )
 
                 if (stan.punkty.isEmpty()) {
@@ -209,6 +235,22 @@ private fun odmienZakupy(liczba: Int): String {
 }
 
 @Composable
+private fun StatystykaKarta(tytul: String, wartosc: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(tytul, style = MaterialTheme.typography.titleSmall)
+            Text(wartosc, style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+@Composable
 private fun WierszCeny(punkt: PunktCeny) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -221,12 +263,62 @@ private fun WierszCeny(punkt: PunktCeny) {
 
 @Composable
 private fun WykresCen(punkty: List<PunktCeny>, modifier: Modifier = Modifier) {
+    val minCena = punkty.minOf { it.cena }
+    val maxCena = punkty.maxOf { it.cena }
+    val sredniaSkali = (minCena + maxCena) / 2
+
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(64.dp)
+                    .fillMaxHeight(),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(formatujCene(maxCena), style = MaterialTheme.typography.labelSmall)
+                Text(formatujCene(sredniaSkali), style = MaterialTheme.typography.labelSmall)
+                Text(formatujCene(minCena), style = MaterialTheme.typography.labelSmall)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            WykresCanvas(
+                punkty = punkty,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 72.dp)
+        ) {
+            Text(
+                punkty.first().data.format(FORMAT_DATY),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                punkty.last().data.format(FORMAT_DATY),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun WykresCanvas(punkty: List<PunktCeny>, modifier: Modifier = Modifier) {
     val kolorLinii = MaterialTheme.colorScheme.primary
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(180.dp)
-    ) {
+    val kolorSiatki = MaterialTheme.colorScheme.outlineVariant
+    Canvas(modifier = modifier) {
         val minCena = punkty.minOf { it.cena }
         val maxCena = punkty.maxOf { it.cena }
         val zakresCeny = (maxCena - minCena).takeIf { it > 0.0 } ?: 1.0
@@ -237,6 +329,17 @@ private fun WykresCen(punkty: List<PunktCeny>, modifier: Modifier = Modifier) {
         val paddingPx = 8.dp.toPx()
         val szerokosc = size.width - 2 * paddingPx
         val wysokosc = size.height - 2 * paddingPx
+
+        listOf(0f, 0.5f, 1f).forEach { udzial ->
+            val y = paddingPx + udzial * wysokosc
+            drawLine(
+                color = kolorSiatki,
+                start = Offset(paddingPx, y),
+                end = Offset(paddingPx + szerokosc, y),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f))
+            )
+        }
 
         fun offsetDlaPunktu(punkt: PunktCeny): Offset {
             val postepX = (punkt.data.toEpochDay() - minDzien).toFloat() / zakresDni

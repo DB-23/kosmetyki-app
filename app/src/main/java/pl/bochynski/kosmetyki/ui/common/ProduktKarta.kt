@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
@@ -68,6 +69,16 @@ fun WierszKarty(
                     Text(etykietaSztuki, style = MaterialTheme.typography.labelSmall)
                 }
                 Row(verticalAlignment = Alignment.Top) {
+                    if (produkt.ulubiony) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = "Ulubiony",
+                            tint = kolorTekstu,
+                            modifier = Modifier
+                                .padding(top = 3.dp, end = 4.dp)
+                                .size(16.dp)
+                        )
+                    }
                     if (otwarte) {
                         Icon(
                             imageVector = Icons.Filled.LockOpen,

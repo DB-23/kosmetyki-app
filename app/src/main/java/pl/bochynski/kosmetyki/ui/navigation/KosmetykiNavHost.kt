@@ -29,6 +29,7 @@ import pl.bochynski.kosmetyki.ui.archiwum.ArchiwumRoute
 import pl.bochynski.kosmetyki.ui.historiacen.HistoriaCenRoute
 import pl.bochynski.kosmetyki.ui.otwarte.OtwarteRoute
 import pl.bochynski.kosmetyki.ui.produkt.ProduktFormRoute
+import pl.bochynski.kosmetyki.ui.produktdetal.ProduktDetalRoute
 import pl.bochynski.kosmetyki.ui.pulpit.PulpitRoute
 import pl.bochynski.kosmetyki.ui.zapasy.ZapasyRoute
 
@@ -43,9 +44,13 @@ private object KosmetykiRoutes {
     const val HISTORIA_CEN = "historiaCen"
     const val PRODUKT_FORM_BAZA = "produktForm"
     const val PRODUKT_FORM = "$PRODUKT_FORM_BAZA?$ARG_PRODUKT_ID={$ARG_PRODUKT_ID}"
+    const val PRODUKT_DETAL_BAZA = "produktDetal"
+    const val PRODUKT_DETAL = "$PRODUKT_DETAL_BAZA/{$ARG_PRODUKT_ID}"
 
     fun produktForm(produktId: Long? = null) =
         "$PRODUKT_FORM_BAZA?$ARG_PRODUKT_ID=${produktId ?: BEZ_PRODUKTU}"
+
+    fun produktDetal(produktId: Long) = "$PRODUKT_DETAL_BAZA/$produktId"
 }
 
 private data class PozycjaNawigacji(val trasa: String, val etykieta: String, val ikona: ImageVector)
@@ -118,14 +123,14 @@ fun KosmetykiNavHost(
                     kategoriaRepository = kategoriaRepository,
                     produktRepository = produktRepository,
                     naDodajProdukt = { navController.navigate(KosmetykiRoutes.produktForm()) },
-                    naEdytujProdukt = { produktId -> navController.navigate(KosmetykiRoutes.produktForm(produktId)) }
+                    naEdytujProdukt = { produktId -> navController.navigate(KosmetykiRoutes.produktDetal(produktId)) }
                 )
             }
             composable(KosmetykiRoutes.OTWARTE) {
                 OtwarteRoute(
                     kategoriaRepository = kategoriaRepository,
                     produktRepository = produktRepository,
-                    naEdytujProdukt = { produktId -> navController.navigate(KosmetykiRoutes.produktForm(produktId)) }
+                    naEdytujProdukt = { produktId -> navController.navigate(KosmetykiRoutes.produktDetal(produktId)) }
                 )
             }
             composable(KosmetykiRoutes.ARCHIWUM) {
@@ -149,6 +154,19 @@ fun KosmetykiNavHost(
                     kategoriaRepository = kategoriaRepository,
                     produktRepository = produktRepository,
                     naWstecz = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = KosmetykiRoutes.PRODUKT_DETAL,
+                arguments = listOf(navArgument(ARG_PRODUKT_ID) { type = NavType.LongType })
+            ) { backStackEntry ->
+                val produktId = backStackEntry.arguments?.getLong(ARG_PRODUKT_ID) ?: BEZ_PRODUKTU
+                ProduktDetalRoute(
+                    produktId = produktId,
+                    kategoriaRepository = kategoriaRepository,
+                    produktRepository = produktRepository,
+                    naWstecz = { navController.popBackStack() },
+                    naEdytuj = { navController.navigate(KosmetykiRoutes.produktForm(produktId)) }
                 )
             }
         }

@@ -52,4 +52,7 @@ interface ProduktDao {
 
     @Query("SELECT * FROM produkty WHERE nazwa = :nazwa ORDER BY dataDodania DESC")
     suspend fun znajdzWszystkiePoNazwie(nazwa: String): List<ProduktEntity>
+
+    @Query("SELECT * FROM produkty WHERE ulubiony = 1 ORDER BY marka, nazwa")
+    fun obserwujUlubione(): Flow<List<ProduktEntity>>
 }

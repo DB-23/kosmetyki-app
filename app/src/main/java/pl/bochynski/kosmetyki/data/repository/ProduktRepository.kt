@@ -14,6 +14,7 @@ interface ProduktRepository {
     fun obserwujMarki(): Flow<List<String>>
     fun obserwujNazwy(): Flow<List<String>>
     suspend fun znajdzWszystkiePoNazwie(nazwa: String): List<ProduktEntity>
+    fun obserwujUlubione(): Flow<List<ProduktEntity>>
     suspend fun dodaj(produkt: ProduktEntity): Long
     suspend fun dodajWiele(produkty: List<ProduktEntity>)
     suspend fun aktualizuj(produkt: ProduktEntity)
@@ -41,6 +42,8 @@ class ProduktRepositoryImpl(
 
     override suspend fun znajdzWszystkiePoNazwie(nazwa: String): List<ProduktEntity> =
         dao.znajdzWszystkiePoNazwie(nazwa)
+
+    override fun obserwujUlubione(): Flow<List<ProduktEntity>> = dao.obserwujUlubione()
 
     override suspend fun dodaj(produkt: ProduktEntity): Long = dao.wstaw(produkt)
 

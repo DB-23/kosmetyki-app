@@ -39,5 +39,6 @@ data class ProduktEntity(
     val dataZakupu: LocalDate? = null,
     val cenaZakupu: Double? = null,
     val miejsceZakupu: String? = null,
-    val notatka: String? = null
+    val notatka: String? = null,
+    val ulubiony: Boolean = false
 )
