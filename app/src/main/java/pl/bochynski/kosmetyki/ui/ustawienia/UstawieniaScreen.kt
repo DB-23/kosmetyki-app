@@ -6,14 +6,23 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,8 +30,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -31,7 +42,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -40,6 +55,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.bochynski.kosmetyki.data.repository.DOMYSLNE_KOLORY_STATUSOW
+import pl.bochynski.kosmetyki.data.repository.KoloryStatusow
+import pl.bochynski.kosmetyki.data.repository.StatusKolorowy
+import pl.bochynski.kosmetyki.data.repository.TrybMotywu
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
 
 @Composable
@@ -55,6 +74,8 @@ fun UstawieniaRoute(
         stan = stan,
         naWstecz = naWstecz,
         naZmianeProguDni = viewModel::ustawProgDni,
+        naZmianeTrybuMotywu = viewModel::ustawTrybMotywu,
+        naZmianeKoloruStatusu = viewModel::ustawKolorStatusu,
         modifier = modifier
     )
 }
@@ -65,6 +86,8 @@ fun UstawieniaScreen(
     stan: UstawieniaUiState,
     naWstecz: () -> Unit,
     naZmianeProguDni: (String) -> Unit,
+    naZmianeTrybuMotywu: (TrybMotywu) -> Unit,
+    naZmianeKoloruStatusu: (StatusKolorowy, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -84,6 +107,8 @@ fun UstawieniaScreen(
         lifecycleOwner.lifecycle.addObserver(obserwator)
         onDispose { lifecycleOwner.lifecycle.removeObserver(obserwator) }
     }
+
+    var edytowanyStatus by remember { mutableStateOf<StatusKolorowy?>(null) }
 
     Scaffold(
         modifier = modifier,
@@ -147,6 +172,173 @@ fun UstawieniaScreen(
                     }
                 }
             }
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("Motyw", style = MaterialTheme.typography.titleMedium)
+                    listOf(
+                        TrybMotywu.SYSTEMOWY to "Systemowy",
+                        TrybMotywu.JASNY to "Jasny",
+                        TrybMotywu.CIEMNY to "Ciemny"
+                    ).forEach { (tryb, etykieta) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { naZmianeTrybuMotywu(tryb) },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = stan.trybMotywu == tryb,
+                                onClick = { naZmianeTrybuMotywu(tryb) }
+                            )
+                            Text(etykieta)
+                        }
+                    }
+                }
+            }
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text("Kolory statusów", style = MaterialTheme.typography.titleMedium)
+                    WierszKoloruStatusu(
+                        etykieta = "Przeterminowane",
+                        kolor = stan.koloryStatusow.przeterminowane,
+                        naKlikniecie = { edytowanyStatus = StatusKolorowy.PRZETERMINOWANE }
+                    )
+                    WierszKoloruStatusu(
+                        etykieta = "Termin w ciągu 90 dni",
+                        kolor = stan.koloryStatusow.pilne,
+                        naKlikniecie = { edytowanyStatus = StatusKolorowy.PILNE }
+                    )
+                    WierszKoloruStatusu(
+                        etykieta = "Termin w ciągu 180 dni",
+                        kolor = stan.koloryStatusow.wkrotce,
+                        naKlikniecie = { edytowanyStatus = StatusKolorowy.WKROTCE }
+                    )
+                }
+            }
+        }
+    }
+
+    edytowanyStatus?.let { status ->
+        DialogWyboruKoloru(
+            tytul = tytulStatusu(status),
+            aktualnyKolor = kolorDlaStatusu(stan.koloryStatusow, status),
+            domyslnyKolor = kolorDlaStatusu(DOMYSLNE_KOLORY_STATUSOW, status),
+            naWybierz = { kolor -> naZmianeKoloruStatusu(status, kolor) },
+            onDismiss = { edytowanyStatus = null }
+        )
+    }
+}
+
+private fun tytulStatusu(status: StatusKolorowy): String = when (status) {
+    StatusKolorowy.PRZETERMINOWANE -> "Kolor: Przeterminowane"
+    StatusKolorowy.PILNE -> "Kolor: Termin w ciągu 90 dni"
+    StatusKolorowy.WKROTCE -> "Kolor: Termin w ciągu 180 dni"
+}
+
+private fun kolorDlaStatusu(kolory: KoloryStatusow, status: StatusKolorowy): Int = when (status) {
+    StatusKolorowy.PRZETERMINOWANE -> kolory.przeterminowane
+    StatusKolorowy.PILNE -> kolory.pilne
+    StatusKolorowy.WKROTCE -> kolory.wkrotce
+}
+
+private val PRESETY_KOLOROW = listOf(
+    0xFF7F0000.toInt(), 0xFFB71C1C.toInt(), 0xFFD32F2F.toInt(), 0xFFE64A19.toInt(),
+    0xFFF57C00.toInt(), 0xFFFF9800.toInt(), 0xFFF9A825.toInt(), 0xFFFBC02D.toInt(),
+    0xFF512DA8.toInt(), 0xFF1976D2.toInt(), 0xFF00796B.toInt(), 0xFF388E3C.toInt()
+)
+
+@Composable
+private fun WierszKoloruStatusu(etykieta: String, kolor: Int, naKlikniecie: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = naKlikniecie)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(etykieta, style = MaterialTheme.typography.bodyLarge)
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color(kolor))
+                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+        )
+    }
+}
+
+@Composable
+private fun DialogWyboruKoloru(
+    tytul: String,
+    aktualnyKolor: Int,
+    domyslnyKolor: Int,
+    naWybierz: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(tytul) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                PRESETY_KOLOROW.chunked(4).forEach { wiersz ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        wiersz.forEach { kolor ->
+                            KoloroweKolko(
+                                kolor = kolor,
+                                zaznaczony = kolor == aktualnyKolor,
+                                naKlikniecie = {
+                                    naWybierz(kolor)
+                                    onDismiss()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            Row {
+                TextButton(onClick = {
+                    naWybierz(domyslnyKolor)
+                    onDismiss()
+                }) { Text("Domyślny") }
+                TextButton(onClick = onDismiss) { Text("Zamknij") }
+            }
+        }
+    )
+}
+
+@Composable
+private fun KoloroweKolko(kolor: Int, zaznaczony: Boolean, naKlikniecie: () -> Unit) {
+    val kolorCompose = Color(kolor)
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(kolorCompose)
+            .border(
+                width = if (zaznaczony) 3.dp else 1.dp,
+                color = if (zaznaczony) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline,
+                shape = CircleShape
+            )
+            .clickable(onClick = naKlikniecie),
+        contentAlignment = Alignment.Center
+    ) {
+        if (zaznaczony) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = "Wybrany",
+                tint = if (kolorCompose.luminance() > 0.5f) Color.Black else Color.White
+            )
         }
     }
 }

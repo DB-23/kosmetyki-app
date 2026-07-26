@@ -8,11 +8,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import pl.bochynski.kosmetyki.data.repository.DOMYSLNE_KOLORY_STATUSOW
+import pl.bochynski.kosmetyki.data.repository.KoloryStatusow
+import pl.bochynski.kosmetyki.data.repository.StatusKolorowy
+import pl.bochynski.kosmetyki.data.repository.TrybMotywu
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
 
 data class UstawieniaUiState(
     val progDniTekst: String = "",
     val blad: String? = null,
+    val trybMotywu: TrybMotywu = TrybMotywu.SYSTEMOWY,
+    val koloryStatusow: KoloryStatusow = DOMYSLNE_KOLORY_STATUSOW,
     val trwaLadowanie: Boolean = true
 )
 
@@ -28,6 +34,16 @@ class UstawieniaViewModel(
             val prog = ustawieniaRepository.pobierzProgPowiadomienDni()
             _stan.update { it.copy(progDniTekst = prog.toString(), trwaLadowanie = false) }
         }
+        viewModelScope.launch {
+            ustawieniaRepository.obserwujTrybMotywu().collect { tryb ->
+                _stan.update { it.copy(trybMotywu = tryb) }
+            }
+        }
+        viewModelScope.launch {
+            ustawieniaRepository.obserwujKoloryStatusow().collect { kolory ->
+                _stan.update { it.copy(koloryStatusow = kolory) }
+            }
+        }
     }
 
     fun ustawProgDni(wartosc: String) {
@@ -41,6 +57,14 @@ class UstawieniaViewModel(
         }
         _stan.update { it.copy(blad = null) }
         viewModelScope.launch { ustawieniaRepository.ustawProgPowiadomienDni(liczba) }
+    }
+
+    fun ustawTrybMotywu(tryb: TrybMotywu) {
+        viewModelScope.launch { ustawieniaRepository.ustawTrybMotywu(tryb) }
+    }
+
+    fun ustawKolorStatusu(status: StatusKolorowy, kolorArgb: Int) {
+        viewModelScope.launch { ustawieniaRepository.ustawKolorStatusu(status, kolorArgb) }
     }
 }
 

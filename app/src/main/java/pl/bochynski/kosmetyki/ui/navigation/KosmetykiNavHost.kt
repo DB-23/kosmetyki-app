@@ -12,9 +12,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -27,6 +29,7 @@ import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
 import pl.bochynski.kosmetyki.ui.archiwum.ArchiwumRoute
+import pl.bochynski.kosmetyki.ui.common.LocalKoloryStatusow
 import pl.bochynski.kosmetyki.ui.filtrowanalista.FiltrowanaListaRoute
 import pl.bochynski.kosmetyki.ui.filtrowanalista.RodzajFiltra
 import pl.bochynski.kosmetyki.ui.historiacen.HistoriaCenRoute
@@ -82,11 +85,13 @@ fun KosmetykiNavHost(
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val aktualnaTrasa = backStackEntry?.destination
+    val koloryStatusow by ustawieniaRepository.obserwujKoloryStatusow().collectAsStateWithLifecycle()
 
     val pokazDolnyPasek = POZYCJE_NAWIGACJI.any { pozycja ->
         aktualnaTrasa?.hierarchy?.any { it.route == pozycja.trasa } == true
     }
 
+    CompositionLocalProvider(LocalKoloryStatusow provides koloryStatusow) {
     Scaffold(
         modifier = modifier,
         bottomBar = {
@@ -206,5 +211,6 @@ fun KosmetykiNavHost(
                 )
             }
         }
+    }
     }
 }
