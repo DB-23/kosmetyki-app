@@ -15,9 +15,15 @@ import pl.bochynski.kosmetyki.domain.dniDoKonca
 import pl.bochynski.kosmetyki.domain.poziomPilnosci
 
 data class PulpitUiState(
+    val liczbaWszystkich: Int = 0,
+    val liczbaWZapasie: Int = 0,
+    val liczbaOtwartych: Int = 0,
     val liczbaPrzeterminowanych: Int = 0,
     val liczbaPilnych: Int = 0,
     val liczbaWkrotce: Int = 0,
+    val wartoscZapasow: Double = 0.0,
+    val najczestszaMarka: String? = null,
+    val najczestszeMiejsceZakupu: String? = null,
     val trwaLadowanie: Boolean = true
 )
 
@@ -31,14 +37,26 @@ class PulpitViewModel(
     init {
         viewModelScope.launch {
             produktRepository.obserwujWszystkieProdukty().collect { produkty ->
-                val poziomy = produkty
-                    .filter { it.status != StatusProduktu.ZUZYTE }
-                    .map { poziomPilnosci(it.dniDoKonca()) }
+                val aktywne = produkty.filter { it.status != StatusProduktu.ZUZYTE }
+                val poziomy = aktywne.map { poziomPilnosci(it.dniDoKonca()) }
                 _stan.update {
                     it.copy(
+                        liczbaWszystkich = aktywne.size,
+                        liczbaWZapasie = aktywne.count { p -> p.status == StatusProduktu.W_ZAPASIE },
+                        liczbaOtwartych = aktywne.count { p -> p.status == StatusProduktu.OTWARTE },
                         liczbaPrzeterminowanych = poziomy.count { p -> p == PoziomPilnosci.PRZETERMINOWANY },
                         liczbaPilnych = poziomy.count { p -> p == PoziomPilnosci.PILNY },
                         liczbaWkrotce = poziomy.count { p -> p == PoziomPilnosci.WKROTCE },
+                        wartoscZapasow = aktywne.sumOf { p -> p.cenaZakupu ?: 0.0 },
+                        najczestszaMarka = produkty
+                            .groupBy { p -> p.marka }
+                            .maxByOrNull { entry -> entry.value.size }
+                            ?.key,
+                        najczestszeMiejsceZakupu = produkty
+                            .mapNotNull { p -> p.miejsceZakupu?.takeIf { m -> m.isNotBlank() } }
+                            .groupBy { it }
+                            .maxByOrNull { entry -> entry.value.size }
+                            ?.key,
                         trwaLadowanie = false
                     )
                 }
