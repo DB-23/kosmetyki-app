@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
@@ -17,9 +21,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,6 +56,8 @@ import java.time.format.DateTimeFormatter
 fun ZapasyRoute(
     kategoriaRepository: KategoriaRepository,
     produktRepository: ProduktRepository,
+    naDodajProdukt: () -> Unit,
+    naEdytujProdukt: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: ZapasyViewModel = viewModel(
@@ -62,6 +70,8 @@ fun ZapasyRoute(
         naZmianeSzukania = viewModel::ustawSzukajTekst,
         naOznaczOtwarte = viewModel::oznaczOtwarte,
         naCofnijOtwarcie = viewModel::cofnijOtwarcie,
+        naDodajProdukt = naDodajProdukt,
+        naEdytujProdukt = { naEdytujProdukt(it.id) },
         modifier = modifier
     )
 }
@@ -74,6 +84,8 @@ fun ZapasyScreen(
     naZmianeSzukania: (String) -> Unit,
     naOznaczOtwarte: (ProduktEntity) -> Unit,
     naCofnijOtwarcie: (ProduktEntity) -> Unit,
+    naDodajProdukt: () -> Unit,
+    naEdytujProdukt: (ProduktEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val rozwiniete = remember { mutableStateMapOf<String, Boolean>() }
@@ -101,59 +113,72 @@ fun ZapasyScreen(
         )
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        TopAppBar(title = { Text("Zapasy") })
-
-        OutlinedTextField(
-            value = stan.szukajTekst,
-            onValueChange = naZmianeSzukania,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text("Szukaj...") },
-            singleLine = true
-        )
-
-        PrimaryScrollableTabRow(selectedTabIndex = indeksZakladki(stan)) {
-            Tab(
-                selected = stan.wybranaKategoriaId == null,
-                onClick = { naWybranaKategoria(null) },
-                text = { Text("Wszystkie") }
-            )
-            stan.kategorie.forEach { kategoria ->
-                Tab(
-                    selected = stan.wybranaKategoriaId == kategoria.id,
-                    onClick = { naWybranaKategoria(kategoria.id) },
-                    text = { Text(kategoria.nazwa) }
-                )
+    Scaffold(
+        modifier = modifier,
+        topBar = { TopAppBar(title = { Text("Zapasy") }) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = naDodajProdukt) {
+                Icon(Icons.Filled.Add, contentDescription = "Dodaj produkt")
             }
         }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            OutlinedTextField(
+                value = stan.szukajTekst,
+                onValueChange = naZmianeSzukania,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Szukaj...") },
+                singleLine = true
+            )
 
-        if (stan.grupy.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = if (stan.trwaLadowanie) "Wczytywanie..." else "Brak produktów",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            PrimaryScrollableTabRow(selectedTabIndex = indeksZakladki(stan)) {
+                Tab(
+                    selected = stan.wybranaKategoriaId == null,
+                    onClick = { naWybranaKategoria(null) },
+                    text = { Text("Wszystkie") }
                 )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(stan.grupy, key = { it.kluczListy }) { grupa ->
-                    KartaGrupy(
-                        grupa = grupa,
-                        pokazKategorie = stan.wybranaKategoriaId == null,
-                        nazwaKategorii = stan.kategorie.firstOrNull { it.id == grupa.reprezentant.kategoriaId }?.nazwa,
-                        rozwinieta = rozwiniete[grupa.kluczListy] == true,
-                        naToggleRozwiniecia = {
-                            rozwiniete[grupa.kluczListy] = !(rozwiniete[grupa.kluczListy] ?: false)
-                        },
-                        naOznaczOtwarte = naOznaczOtwarte,
-                        naProbaCofnieciaOtwarcia = { produktDoPotwierdzenia = it }
+                stan.kategorie.forEach { kategoria ->
+                    Tab(
+                        selected = stan.wybranaKategoriaId == kategoria.id,
+                        onClick = { naWybranaKategoria(kategoria.id) },
+                        text = { Text(kategoria.nazwa) }
                     )
+                }
+            }
+
+            if (stan.grupy.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = if (stan.trwaLadowanie) "Wczytywanie..." else "Brak produktów",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(stan.grupy, key = { it.kluczListy }) { grupa ->
+                        KartaGrupy(
+                            grupa = grupa,
+                            pokazKategorie = stan.wybranaKategoriaId == null,
+                            nazwaKategorii = stan.kategorie.firstOrNull { it.id == grupa.reprezentant.kategoriaId }?.nazwa,
+                            rozwinieta = rozwiniete[grupa.kluczListy] == true,
+                            naToggleRozwiniecia = {
+                                rozwiniete[grupa.kluczListy] = !(rozwiniete[grupa.kluczListy] ?: false)
+                            },
+                            naOznaczOtwarte = naOznaczOtwarte,
+                            naProbaCofnieciaOtwarcia = { produktDoPotwierdzenia = it },
+                            naEdytujProdukt = naEdytujProdukt
+                        )
+                    }
                 }
             }
         }
@@ -174,7 +199,8 @@ private fun KartaGrupy(
     rozwinieta: Boolean,
     naToggleRozwiniecia: () -> Unit,
     naOznaczOtwarte: (ProduktEntity) -> Unit,
-    naProbaCofnieciaOtwarcia: (ProduktEntity) -> Unit
+    naProbaCofnieciaOtwarcia: (ProduktEntity) -> Unit,
+    naEdytujProdukt: (ProduktEntity) -> Unit
 ) {
     Column {
         WierszKarty(
@@ -182,7 +208,7 @@ private fun KartaGrupy(
             liczbaSztuk = grupa.liczbaSztuk,
             pokazKategorie = pokazKategorie,
             nazwaKategorii = nazwaKategorii,
-            naKlikniecie = if (grupa.liczbaSztuk > 1) naToggleRozwiniecia else null,
+            naKlikniecie = if (grupa.liczbaSztuk > 1) naToggleRozwiniecia else { { naEdytujProdukt(grupa.reprezentant) } },
             naOznaczOtwarte = naOznaczOtwarte,
             naProbaCofnieciaOtwarcia = naProbaCofnieciaOtwarcia
         )
@@ -197,7 +223,7 @@ private fun KartaGrupy(
                         liczbaSztuk = 1,
                         pokazKategorie = false,
                         nazwaKategorii = null,
-                        naKlikniecie = null,
+                        naKlikniecie = { naEdytujProdukt(sztuka) },
                         naOznaczOtwarte = naOznaczOtwarte,
                         naProbaCofnieciaOtwarcia = naProbaCofnieciaOtwarcia,
                         etykietaSztuki = "Sztuka ${indeks + 1}"
@@ -240,11 +266,22 @@ private fun WierszKarty(
                 if (etykietaSztuki != null) {
                     Text(etykietaSztuki, style = MaterialTheme.typography.labelSmall)
                 }
-                Text(
-                    text = budujTytul(produkt),
-                    style = MaterialTheme.typography.titleMedium,
-                    textDecoration = if (otwarte) TextDecoration.LineThrough else TextDecoration.None
-                )
+                Row(verticalAlignment = Alignment.Top) {
+                    if (otwarte) {
+                        Icon(
+                            imageVector = Icons.Filled.LockOpen,
+                            contentDescription = "Produkt otwarty",
+                            tint = kolorTekstu,
+                            modifier = Modifier
+                                .padding(top = 3.dp, end = 4.dp)
+                                .size(16.dp)
+                        )
+                    }
+                    Text(
+                        text = budujTytul(produkt),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
                 budujOpisTerminu(produkt)?.let { opis ->
                     Text(opis, style = MaterialTheme.typography.bodySmall)
                 }
