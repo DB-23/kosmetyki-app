@@ -26,6 +26,7 @@ import androidx.navigation.navArgument
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.ui.archiwum.ArchiwumRoute
+import pl.bochynski.kosmetyki.ui.historiacen.HistoriaCenRoute
 import pl.bochynski.kosmetyki.ui.otwarte.OtwarteRoute
 import pl.bochynski.kosmetyki.ui.produkt.ProduktFormRoute
 import pl.bochynski.kosmetyki.ui.pulpit.PulpitRoute
@@ -39,6 +40,7 @@ private object KosmetykiRoutes {
     const val ZAPASY = "zapasy"
     const val OTWARTE = "otwarte"
     const val ARCHIWUM = "archiwum"
+    const val HISTORIA_CEN = "historiaCen"
     const val PRODUKT_FORM_BAZA = "produktForm"
     const val PRODUKT_FORM = "$PRODUKT_FORM_BAZA?$ARG_PRODUKT_ID={$ARG_PRODUKT_ID}"
 
@@ -100,7 +102,16 @@ fun KosmetykiNavHost(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(KosmetykiRoutes.PULPIT) {
-                PulpitRoute(produktRepository = produktRepository)
+                PulpitRoute(
+                    produktRepository = produktRepository,
+                    naHistorieCen = { navController.navigate(KosmetykiRoutes.HISTORIA_CEN) }
+                )
+            }
+            composable(KosmetykiRoutes.HISTORIA_CEN) {
+                HistoriaCenRoute(
+                    produktRepository = produktRepository,
+                    naWstecz = { navController.popBackStack() }
+                )
             }
             composable(KosmetykiRoutes.ZAPASY) {
                 ZapasyRoute(

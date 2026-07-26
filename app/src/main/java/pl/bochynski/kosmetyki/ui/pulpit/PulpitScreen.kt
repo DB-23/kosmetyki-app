@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,17 +36,18 @@ import java.util.Locale
 @Composable
 fun PulpitRoute(
     produktRepository: ProduktRepository,
+    naHistorieCen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: PulpitViewModel = viewModel(factory = PulpitViewModelFactory(produktRepository))
     val stan by viewModel.stan.collectAsState()
 
-    PulpitScreen(stan = stan, modifier = modifier)
+    PulpitScreen(stan = stan, naHistorieCen = naHistorieCen, modifier = modifier)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PulpitScreen(stan: PulpitUiState, modifier: Modifier = Modifier) {
+fun PulpitScreen(stan: PulpitUiState, naHistorieCen: () -> Unit, modifier: Modifier = Modifier) {
     Scaffold(
         modifier = modifier,
         topBar = { TopAppBar(title = { Text("Pulpit") }) }
@@ -108,6 +112,10 @@ fun PulpitScreen(stan: PulpitUiState, modifier: Modifier = Modifier) {
 
                 NeutralnaKarta(tytul = "Wartość zapasów", wartosc = formatujCene(stan.wartoscZapasow))
                 NeutralnaKarta(
+                    tytul = "Średnia cena kosmetyku",
+                    wartosc = stan.sredniaCena?.let { formatujCene(it) } ?: "Brak danych"
+                )
+                NeutralnaKarta(
                     tytul = "Najczęściej wybierana marka",
                     wartosc = stan.najczestszaMarka ?: "Brak danych",
                     styl = MaterialTheme.typography.titleLarge
@@ -117,6 +125,8 @@ fun PulpitScreen(stan: PulpitUiState, modifier: Modifier = Modifier) {
                     wartosc = stan.najczestszeMiejsceZakupu ?: "Brak danych",
                     styl = MaterialTheme.typography.titleLarge
                 )
+
+                KartaHistoriiCen(naKlikniecie = naHistorieCen)
             }
         }
     }
@@ -141,6 +151,29 @@ private fun LicznikKarta(tytul: String, liczba: Int, poziom: PoziomPilnosci) {
         ) {
             Text(tytul, style = MaterialTheme.typography.titleMedium)
             Text(liczba.toString(), style = MaterialTheme.typography.displaySmall)
+        }
+    }
+}
+
+@Composable
+private fun KartaHistoriiCen(naKlikniecie: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = naKlikniecie,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null)
+            Text("Historia cen", style = MaterialTheme.typography.titleMedium)
         }
     }
 }

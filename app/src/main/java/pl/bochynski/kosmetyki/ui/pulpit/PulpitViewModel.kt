@@ -22,6 +22,7 @@ data class PulpitUiState(
     val liczbaPilnych: Int = 0,
     val liczbaWkrotce: Int = 0,
     val wartoscZapasow: Double = 0.0,
+    val sredniaCena: Double? = null,
     val najczestszaMarka: String? = null,
     val najczestszeMiejsceZakupu: String? = null,
     val trwaLadowanie: Boolean = true
@@ -48,6 +49,8 @@ class PulpitViewModel(
                         liczbaPilnych = poziomy.count { p -> p == PoziomPilnosci.PILNY },
                         liczbaWkrotce = poziomy.count { p -> p == PoziomPilnosci.WKROTCE },
                         wartoscZapasow = aktywne.sumOf { p -> p.cenaZakupu ?: 0.0 },
+                        sredniaCena = produkty.mapNotNull { p -> p.cenaZakupu }.takeIf { it.isNotEmpty() }
+                            ?.let { ceny -> ceny.sum() / ceny.size },
                         najczestszaMarka = produkty
                             .groupBy { p -> p.marka }
                             .maxByOrNull { entry -> entry.value.size }
