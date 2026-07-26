@@ -46,4 +46,10 @@ interface ProduktDao {
 
     @Query("SELECT DISTINCT marka FROM produkty ORDER BY marka")
     fun obserwujMarki(): Flow<List<String>>
+
+    @Query("SELECT DISTINCT nazwa FROM produkty ORDER BY nazwa")
+    fun obserwujNazwy(): Flow<List<String>>
+
+    @Query("SELECT * FROM produkty WHERE nazwa = :nazwa ORDER BY dataDodania DESC")
+    suspend fun znajdzWszystkiePoNazwie(nazwa: String): List<ProduktEntity>
 }

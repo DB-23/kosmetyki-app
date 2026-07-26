@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
+import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import java.time.Instant
@@ -80,6 +82,9 @@ fun ProduktFormRoute(
         naZmianeSerii = viewModel::ustawSerie,
         naZmianeLinii = viewModel::ustawLinie,
         naZmianeNazwy = viewModel::ustawNazwe,
+        naWybierzPodpowiedzNazwy = viewModel::wybierzPodpowiedzNazwy,
+        naWybierzKandydataUzupelnienia = viewModel::uzupelnijZKandydata,
+        naOdrzucUzupelnienie = viewModel::odrzucUzupelnienieDanych,
         naZmianeEan = viewModel::ustawEan,
         naZmianePojemnosci = viewModel::ustawPojemnosc,
         naZmianeDatyWaznosci = viewModel::ustawDateWaznosci,
@@ -105,6 +110,9 @@ fun ProduktFormScreen(
     naZmianeSerii: (String) -> Unit,
     naZmianeLinii: (String) -> Unit,
     naZmianeNazwy: (String) -> Unit,
+    naWybierzPodpowiedzNazwy: (String) -> Unit,
+    naWybierzKandydataUzupelnienia: (ProduktEntity) -> Unit,
+    naOdrzucUzupelnienie: () -> Unit,
     naZmianeEan: (String) -> Unit,
     naZmianePojemnosci: (String) -> Unit,
     naZmianeDatyWaznosci: (LocalDate?) -> Unit,
@@ -176,12 +184,12 @@ fun ProduktFormScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                OutlinedTextField(
-                    value = stan.nazwa,
-                    onValueChange = naZmianeNazwy,
-                    label = { Text("Nazwa *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                PoleZAutouzupelnianiem(
+                    etykieta = "Nazwa *",
+                    wartosc = stan.nazwa,
+                    podpowiedzi = stan.podpowiedziNazw,
+                    naZmiane = naZmianeNazwy,
+                    naWybierzPodpowiedz = naWybierzPodpowiedzNazwy
                 )
                 OutlinedTextField(
                     value = stan.ean,
@@ -271,6 +279,83 @@ fun ProduktFormScreen(
             }
         }
     }
+
+    when (stan.kandydaciUzupelnienia.size) {
+        0 -> Unit
+        1 -> {
+            val kandydat = stan.kandydaciUzupelnienia.first()
+            AlertDialog(
+                onDismissRequest = naOdrzucUzupelnienie,
+                title = { Text("Uzupełnić dane?") },
+                text = {
+                    Text(
+                        "Znaleziono w bazie produkt \"${kandydat.marka} ${kandydat.nazwa}\". " +
+                            "Czy uzupełnić pozostałe pola (kategoria, marka, seria, linia, EAN, " +
+                            "pojemność, okres zużycia) na jego podstawie?"
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { naWybierzKandydataUzupelnienia(kandydat) }) { Text("Tak") }
+                },
+                dismissButton = {
+                    TextButton(onClick = naOdrzucUzupelnienie) { Text("Nie") }
+                }
+            )
+        }
+        else -> {
+            AlertDialog(
+                onDismissRequest = naOdrzucUzupelnienie,
+                title = { Text("Który produkt?") },
+                text = {
+                    Column {
+                        Text("Znaleziono kilka produktów o tej nazwie. Wybierz, na podstawie którego uzupełnić dane:")
+                        stan.kandydaciUzupelnienia.forEach { kandydat ->
+                            KandydatUzupelnienia(
+                                kandydat = kandydat,
+                                nazwaKategorii = stan.kategorie.firstOrNull { it.id == kandydat.kategoriaId }?.nazwa,
+                                naKlikniecie = { naWybierzKandydataUzupelnienia(kandydat) }
+                            )
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = naOdrzucUzupelnienie) { Text("Zamknij") }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun KandydatUzupelnienia(
+    kandydat: ProduktEntity,
+    nazwaKategorii: String?,
+    naKlikniecie: () -> Unit
+) {
+    val szczegoly = listOfNotNull(
+        kandydat.seria?.takeIf { it.isNotBlank() },
+        kandydat.linia?.takeIf { it.isNotBlank() },
+        nazwaKategorii,
+        kandydat.pojemnosc?.takeIf { it.isNotBlank() }
+    ).joinToString(" · ")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = naKlikniecie)
+            .padding(vertical = 10.dp)
+    ) {
+        Text(kandydat.marka, style = MaterialTheme.typography.bodyLarge)
+        if (szczegoly.isNotBlank()) {
+            Text(
+                szczegoly,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+    HorizontalDivider()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -376,7 +461,8 @@ private fun PoleZAutouzupelnianiem(
     wartosc: String,
     podpowiedzi: List<String>,
     naZmiane: (String) -> Unit,
-    placeholder: String? = null
+    placeholder: String? = null,
+    naWybierzPodpowiedz: (String) -> Unit = naZmiane
 ) {
     var rozwiniete by remember { mutableStateOf(false) }
     val przefiltrowane = podpowiedzi.filter {
@@ -409,7 +495,7 @@ private fun PoleZAutouzupelnianiem(
                     DropdownMenuItem(
                         text = { Text(podpowiedz) },
                         onClick = {
-                            naZmiane(podpowiedz)
+                            naWybierzPodpowiedz(podpowiedz)
                             rozwiniete = false
                         }
                     )

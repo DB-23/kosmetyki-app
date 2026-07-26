@@ -35,10 +35,12 @@ data class ProduktFormUiState(
     val miejsceZakupu: String = "",
     val podpowiedziMiejsc: List<String> = emptyList(),
     val podpowiedziMarek: List<String> = emptyList(),
+    val podpowiedziNazw: List<String> = emptyList(),
     val notatka: String = "",
     val liczbaSztuk: String = "1",
     val blad: String? = null,
-    val zapisano: Boolean = false
+    val zapisano: Boolean = false,
+    val kandydaciUzupelnienia: List<ProduktEntity> = emptyList()
 )
 
 class ProduktFormViewModel(
@@ -66,6 +68,11 @@ class ProduktFormViewModel(
         viewModelScope.launch {
             produktRepository.obserwujMarki().collect { marki ->
                 _stan.update { it.copy(podpowiedziMarek = marki) }
+            }
+        }
+        viewModelScope.launch {
+            produktRepository.obserwujNazwy().collect { nazwy ->
+                _stan.update { it.copy(podpowiedziNazw = nazwy) }
             }
         }
         if (produktId != null) {
@@ -106,6 +113,41 @@ class ProduktFormViewModel(
     fun ustawSerie(wartosc: String) = _stan.update { it.copy(seria = wartosc) }
     fun ustawLinie(wartosc: String) = _stan.update { it.copy(linia = wartosc) }
     fun ustawNazwe(wartosc: String) = _stan.update { it.copy(nazwa = wartosc, blad = null) }
+
+    fun wybierzPodpowiedzNazwy(nazwa: String) {
+        _stan.update { it.copy(nazwa = nazwa, blad = null) }
+        viewModelScope.launch {
+            val znalezione = produktRepository.znajdzWszystkiePoNazwie(nazwa)
+                .filter { it.id != oryginalnyProdukt?.id }
+                .distinctBy {
+                    listOf(
+                        it.kategoriaId, it.marka, it.seria, it.linia, it.ean,
+                        it.pojemnosc, it.okresZuzyciaPoOtwarciu, it.jednostkaOkresuZuzycia
+                    )
+                }
+            if (znalezione.isNotEmpty()) {
+                _stan.update { it.copy(kandydaciUzupelnienia = znalezione) }
+            }
+        }
+    }
+
+    fun uzupelnijZKandydata(kandydat: ProduktEntity) {
+        _stan.update {
+            it.copy(
+                kategoriaId = kandydat.kategoriaId,
+                marka = kandydat.marka,
+                seria = kandydat.seria.orEmpty(),
+                linia = kandydat.linia.orEmpty(),
+                ean = kandydat.ean.orEmpty(),
+                pojemnosc = kandydat.pojemnosc.orEmpty(),
+                okresZuzycia = kandydat.okresZuzyciaPoOtwarciu?.toString().orEmpty(),
+                jednostkaOkresuZuzycia = kandydat.jednostkaOkresuZuzycia,
+                kandydaciUzupelnienia = emptyList()
+            )
+        }
+    }
+
+    fun odrzucUzupelnienieDanych() = _stan.update { it.copy(kandydaciUzupelnienia = emptyList()) }
     fun ustawEan(wartosc: String) = _stan.update { it.copy(ean = wartosc) }
     fun ustawPojemnosc(wartosc: String) = _stan.update { it.copy(pojemnosc = wartosc) }
     fun ustawDateWaznosci(data: LocalDate?) = _stan.update { it.copy(dataWaznosci = data) }
