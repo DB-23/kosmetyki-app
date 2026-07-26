@@ -2,7 +2,9 @@ package pl.bochynski.kosmetyki.ui.ustawienia
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,8 +19,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -32,6 +36,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -49,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -109,6 +116,7 @@ fun UstawieniaScreen(
     }
 
     var edytowanyStatus by remember { mutableStateOf<StatusKolorowy?>(null) }
+    var wybranaZakladka by remember { mutableStateOf(0) }
 
     Scaffold(
         modifier = modifier,
@@ -127,6 +135,27 @@ fun UstawieniaScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+        ) {
+            SecondaryTabRow(selectedTabIndex = wybranaZakladka) {
+                Tab(
+                    selected = wybranaZakladka == 0,
+                    onClick = { wybranaZakladka = 0 },
+                    text = { Text("Ogólne") }
+                )
+                Tab(
+                    selected = wybranaZakladka == 1,
+                    onClick = { wybranaZakladka = 1 },
+                    text = { Text("Informacje") }
+                )
+            }
+
+            if (wybranaZakladka == 1) {
+                ZakladkaInformacje()
+            } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -221,6 +250,8 @@ fun UstawieniaScreen(
                         naKlikniecie = { edytowanyStatus = StatusKolorowy.WKROTCE }
                     )
                 }
+            }
+        }
             }
         }
     }
@@ -339,6 +370,70 @@ private fun KoloroweKolko(kolor: Int, zaznaczony: Boolean, naKlikniecie: () -> U
                 contentDescription = "Wybrany",
                 tint = if (kolorCompose.luminance() > 0.5f) Color.Black else Color.White
             )
+        }
+    }
+}
+
+@Composable
+private fun ZakladkaInformacje() {
+    val context = LocalContext.current
+    val wersja = remember {
+        runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull() ?: "—"
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text("Wersja aplikacji", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    wersja,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text("Twórca", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Dariusz Bochyński",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "www.dariusz-bochynski.pl",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier
+                        .clickable {
+                            val intencja = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://www.dariusz-bochynski.pl")
+                            )
+                            context.startActivity(intencja)
+                        }
+                )
+            }
         }
     }
 }
