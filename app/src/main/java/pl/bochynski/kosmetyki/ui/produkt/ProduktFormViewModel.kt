@@ -34,6 +34,7 @@ data class ProduktFormUiState(
     val cenaZakupu: String = "",
     val miejsceZakupu: String = "",
     val podpowiedziMiejsc: List<String> = emptyList(),
+    val podpowiedziMarek: List<String> = emptyList(),
     val notatka: String = "",
     val liczbaSztuk: String = "1",
     val blad: String? = null,
@@ -60,6 +61,11 @@ class ProduktFormViewModel(
         viewModelScope.launch {
             produktRepository.obserwujMiejscaZakupu().collect { miejsca ->
                 _stan.update { it.copy(podpowiedziMiejsc = miejsca) }
+            }
+        }
+        viewModelScope.launch {
+            produktRepository.obserwujMarki().collect { marki ->
+                _stan.update { it.copy(podpowiedziMarek = marki) }
             }
         }
         if (produktId != null) {

@@ -156,12 +156,11 @@ fun ProduktFormScreen(
             ) {
                 PoleKategorii(stan = stan, naZmianeKategorii = naZmianeKategorii)
 
-                OutlinedTextField(
-                    value = stan.marka,
-                    onValueChange = naZmianeMarki,
-                    label = { Text("Marka *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                PoleZAutouzupelnianiem(
+                    etykieta = "Marka *",
+                    wartosc = stan.marka,
+                    podpowiedzi = stan.podpowiedziMarek,
+                    naZmiane = naZmianeMarki
                 )
                 OutlinedTextField(
                     value = stan.seria,
@@ -235,7 +234,9 @@ fun ProduktFormScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
 
-                PoleMiejscaZakupu(
+                PoleZAutouzupelnianiem(
+                    etykieta = "Miejsce zakupu",
+                    placeholder = "np. Rossmann",
                     wartosc = stan.miejsceZakupu,
                     podpowiedzi = stan.podpowiedziMiejsc,
                     naZmiane = naZmianeMiejscaZakupu
@@ -370,10 +371,12 @@ private fun PoleDaty(etykieta: String, data: LocalDate?, naZmiane: (LocalDate?) 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PoleMiejscaZakupu(
+private fun PoleZAutouzupelnianiem(
+    etykieta: String,
     wartosc: String,
     podpowiedzi: List<String>,
-    naZmiane: (String) -> Unit
+    naZmiane: (String) -> Unit,
+    placeholder: String? = null
 ) {
     var rozwiniete by remember { mutableStateOf(false) }
     val przefiltrowane = podpowiedzi.filter {
@@ -390,8 +393,8 @@ private fun PoleMiejscaZakupu(
                 naZmiane(it)
                 rozwiniete = true
             },
-            label = { Text("Miejsce zakupu") },
-            placeholder = { Text("np. Rossmann") },
+            label = { Text(etykieta) },
+            placeholder = placeholder?.let { { Text(it) } },
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
@@ -402,11 +405,11 @@ private fun PoleMiejscaZakupu(
                 expanded = rozwiniete,
                 onDismissRequest = { rozwiniete = false }
             ) {
-                przefiltrowane.forEach { miejsce ->
+                przefiltrowane.forEach { podpowiedz ->
                     DropdownMenuItem(
-                        text = { Text(miejsce) },
+                        text = { Text(podpowiedz) },
                         onClick = {
-                            naZmiane(miejsce)
+                            naZmiane(podpowiedz)
                             rozwiniete = false
                         }
                     )

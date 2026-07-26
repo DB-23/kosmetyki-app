@@ -43,4 +43,7 @@ interface ProduktDao {
             "WHERE miejsceZakupu IS NOT NULL ORDER BY miejsceZakupu"
     )
     fun obserwujMiejscaZakupu(): Flow<List<String>>
+
+    @Query("SELECT DISTINCT marka FROM produkty ORDER BY marka")
+    fun obserwujMarki(): Flow<List<String>>
 }
