@@ -17,6 +17,7 @@ import pl.bochynski.kosmetyki.data.backup.KopiaZapasowaProduktow
 import pl.bochynski.kosmetyki.data.repository.DOMYSLNE_KOLORY_STATUSOW
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.KoloryStatusow
+import pl.bochynski.kosmetyki.data.repository.KonfiguracjaSerweraBazy
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.StatusKolorowy
 import pl.bochynski.kosmetyki.data.repository.TrybMotywu
@@ -27,6 +28,7 @@ data class UstawieniaUiState(
     val blad: String? = null,
     val trybMotywu: TrybMotywu = TrybMotywu.SYSTEMOWY,
     val koloryStatusow: KoloryStatusow = DOMYSLNE_KOLORY_STATUSOW,
+    val konfiguracjaSerwera: KonfiguracjaSerweraBazy = KonfiguracjaSerweraBazy(),
     val trwaLadowanie: Boolean = true,
     val trwaOperacjaBazy: Boolean = false,
     val komunikatBazy: String? = null
@@ -56,6 +58,11 @@ class UstawieniaViewModel(
                 _stan.update { it.copy(koloryStatusow = kolory) }
             }
         }
+        viewModelScope.launch {
+            ustawieniaRepository.obserwujKonfiguracjeSerwera().collect { konfiguracja ->
+                _stan.update { it.copy(konfiguracjaSerwera = konfiguracja) }
+            }
+        }
     }
 
     fun ustawProgDni(wartosc: String) {
@@ -77,6 +84,22 @@ class UstawieniaViewModel(
 
     fun ustawKolorStatusu(status: StatusKolorowy, kolorArgb: Int) {
         viewModelScope.launch { ustawieniaRepository.ustawKolorStatusu(status, kolorArgb) }
+    }
+
+    fun ustawAdresSerwera(wartosc: String) {
+        viewModelScope.launch { ustawieniaRepository.ustawAdresSerwera(wartosc) }
+    }
+
+    fun ustawPortSerwera(wartosc: String) {
+        viewModelScope.launch { ustawieniaRepository.ustawPortSerwera(wartosc) }
+    }
+
+    fun ustawNazweUzytkownikaSerwera(wartosc: String) {
+        viewModelScope.launch { ustawieniaRepository.ustawNazweUzytkownikaSerwera(wartosc) }
+    }
+
+    fun ustawHasloSerwera(wartosc: String) {
+        viewModelScope.launch { ustawieniaRepository.ustawHasloSerwera(wartosc) }
     }
 
     fun wyzerujBaze() {

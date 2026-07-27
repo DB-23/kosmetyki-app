@@ -13,6 +13,10 @@ private const val KLUCZ_TRYB_MOTYWU = "tryb_motywu"
 private const val KLUCZ_KOLOR_PRZETERMINOWANE = "kolor_przeterminowane"
 private const val KLUCZ_KOLOR_PILNE = "kolor_pilne"
 private const val KLUCZ_KOLOR_WKROTCE = "kolor_wkrotce"
+private const val KLUCZ_SERWER_ADRES = "serwer_bazy_adres"
+private const val KLUCZ_SERWER_PORT = "serwer_bazy_port"
+private const val KLUCZ_SERWER_NAZWA_UZYTKOWNIKA = "serwer_bazy_nazwa_uzytkownika"
+private const val KLUCZ_SERWER_HASLO = "serwer_bazy_haslo"
 const val DOMYSLNY_PROG_POWIADOMIEN_DNI = 90
 
 enum class TrybMotywu { SYSTEMOWY, JASNY, CIEMNY }
@@ -31,6 +35,15 @@ val DOMYSLNE_KOLORY_STATUSOW = KoloryStatusow(
     wkrotce = 0xFFF9A825.toInt()
 )
 
+// Szkielet pod przyszle polaczenie z zewnetrznym serwerem bazy produktow (kody EAN).
+// Na razie wartosci sa tylko zapisywane lokalnie - nic nie laczy sie z siecia.
+data class KonfiguracjaSerweraBazy(
+    val adres: String = "",
+    val port: String = "",
+    val nazwaUzytkownika: String = "",
+    val haslo: String = ""
+)
+
 interface UstawieniaRepository {
     suspend fun pobierzProgPowiadomienDni(): Int
     suspend fun ustawProgPowiadomienDni(dni: Int)
@@ -38,6 +51,11 @@ interface UstawieniaRepository {
     suspend fun ustawTrybMotywu(tryb: TrybMotywu)
     fun obserwujKoloryStatusow(): StateFlow<KoloryStatusow>
     suspend fun ustawKolorStatusu(status: StatusKolorowy, kolorArgb: Int)
+    fun obserwujKonfiguracjeSerwera(): StateFlow<KonfiguracjaSerweraBazy>
+    suspend fun ustawAdresSerwera(wartosc: String)
+    suspend fun ustawPortSerwera(wartosc: String)
+    suspend fun ustawNazweUzytkownikaSerwera(wartosc: String)
+    suspend fun ustawHasloSerwera(wartosc: String)
 }
 
 class UstawieniaRepositoryImpl(
@@ -47,6 +65,7 @@ class UstawieniaRepositoryImpl(
 
     private val _trybMotywu = MutableStateFlow(wczytajTrybMotywu())
     private val _koloryStatusow = MutableStateFlow(wczytajKoloryStatusow())
+    private val _konfiguracjaSerwera = MutableStateFlow(wczytajKonfiguracjeSerwera())
 
     override suspend fun pobierzProgPowiadomienDni(): Int = withContext(Dispatchers.IO) {
         preferencje.getInt(KLUCZ_PROG_POWIADOMIEN_DNI, DOMYSLNY_PROG_POWIADOMIEN_DNI)
@@ -70,6 +89,36 @@ class UstawieniaRepositoryImpl(
         preferencje.edit().putInt(klucz, kolorArgb).apply()
         _koloryStatusow.value = wczytajKoloryStatusow()
     }
+
+    override fun obserwujKonfiguracjeSerwera(): StateFlow<KonfiguracjaSerweraBazy> =
+        _konfiguracjaSerwera.asStateFlow()
+
+    override suspend fun ustawAdresSerwera(wartosc: String) = withContext(Dispatchers.IO) {
+        preferencje.edit().putString(KLUCZ_SERWER_ADRES, wartosc).apply()
+        _konfiguracjaSerwera.value = _konfiguracjaSerwera.value.copy(adres = wartosc)
+    }
+
+    override suspend fun ustawPortSerwera(wartosc: String) = withContext(Dispatchers.IO) {
+        preferencje.edit().putString(KLUCZ_SERWER_PORT, wartosc).apply()
+        _konfiguracjaSerwera.value = _konfiguracjaSerwera.value.copy(port = wartosc)
+    }
+
+    override suspend fun ustawNazweUzytkownikaSerwera(wartosc: String) = withContext(Dispatchers.IO) {
+        preferencje.edit().putString(KLUCZ_SERWER_NAZWA_UZYTKOWNIKA, wartosc).apply()
+        _konfiguracjaSerwera.value = _konfiguracjaSerwera.value.copy(nazwaUzytkownika = wartosc)
+    }
+
+    override suspend fun ustawHasloSerwera(wartosc: String) = withContext(Dispatchers.IO) {
+        preferencje.edit().putString(KLUCZ_SERWER_HASLO, wartosc).apply()
+        _konfiguracjaSerwera.value = _konfiguracjaSerwera.value.copy(haslo = wartosc)
+    }
+
+    private fun wczytajKonfiguracjeSerwera(): KonfiguracjaSerweraBazy = KonfiguracjaSerweraBazy(
+        adres = preferencje.getString(KLUCZ_SERWER_ADRES, "").orEmpty(),
+        port = preferencje.getString(KLUCZ_SERWER_PORT, "").orEmpty(),
+        nazwaUzytkownika = preferencje.getString(KLUCZ_SERWER_NAZWA_UZYTKOWNIKA, "").orEmpty(),
+        haslo = preferencje.getString(KLUCZ_SERWER_HASLO, "").orEmpty()
+    )
 
     private fun wczytajTrybMotywu(): TrybMotywu {
         val nazwa = preferencje.getString(KLUCZ_TRYB_MOTYWU, null) ?: return TrybMotywu.SYSTEMOWY

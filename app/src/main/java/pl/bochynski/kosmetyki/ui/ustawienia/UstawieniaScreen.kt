@@ -27,6 +27,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -59,6 +61,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -69,6 +73,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.bochynski.kosmetyki.data.repository.DOMYSLNE_KOLORY_STATUSOW
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.KoloryStatusow
+import pl.bochynski.kosmetyki.data.repository.KonfiguracjaSerweraBazy
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.StatusKolorowy
 import pl.bochynski.kosmetyki.data.repository.TrybMotywu
@@ -98,6 +103,10 @@ fun UstawieniaRoute(
         naEksportujDoPliku = viewModel::eksportujDoPliku,
         naImportujZPliku = viewModel::importujZPliku,
         naZamknijKomunikatBazy = viewModel::wyczyscKomunikatBazy,
+        naZmianeAdresuSerwera = viewModel::ustawAdresSerwera,
+        naZmianePortuSerwera = viewModel::ustawPortSerwera,
+        naZmianeNazwyUzytkownikaSerwera = viewModel::ustawNazweUzytkownikaSerwera,
+        naZmianeHaslaSerwera = viewModel::ustawHasloSerwera,
         modifier = modifier
     )
 }
@@ -114,6 +123,10 @@ fun UstawieniaScreen(
     naEksportujDoPliku: (ContentResolver, Uri) -> Unit,
     naImportujZPliku: (ContentResolver, Uri) -> Unit,
     naZamknijKomunikatBazy: () -> Unit,
+    naZmianeAdresuSerwera: (String) -> Unit,
+    naZmianePortuSerwera: (String) -> Unit,
+    naZmianeNazwyUzytkownikaSerwera: (String) -> Unit,
+    naZmianeHaslaSerwera: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -344,6 +357,14 @@ fun UstawieniaScreen(
                     }
                 }
             }
+
+            KartaSerweraBazy(
+                konfiguracja = stan.konfiguracjaSerwera,
+                naZmianeAdresu = naZmianeAdresuSerwera,
+                naZmianePortu = naZmianePortuSerwera,
+                naZmianeNazwyUzytkownika = naZmianeNazwyUzytkownikaSerwera,
+                naZmianeHasla = naZmianeHaslaSerwera
+            )
         }
             }
         }
@@ -379,6 +400,78 @@ fun UstawieniaScreen(
             naWybierz = { kolor -> naZmianeKoloruStatusu(status, kolor) },
             onDismiss = { edytowanyStatus = null }
         )
+    }
+}
+
+@Composable
+private fun KartaSerweraBazy(
+    konfiguracja: KonfiguracjaSerweraBazy,
+    naZmianeAdresu: (String) -> Unit,
+    naZmianePortu: (String) -> Unit,
+    naZmianeNazwyUzytkownika: (String) -> Unit,
+    naZmianeHasla: (String) -> Unit
+) {
+    var hasloWidoczne by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Serwer bazy danych", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Funkcjonalność w przygotowaniu: połączenie z zewnętrznym serwerem bazy " +
+                    "produktów (kody EAN) może pojawić się w kolejnych wersjach aplikacji. " +
+                    "Poniższe dane są na razie tylko zapisywane lokalnie i nie są nigdzie wysyłane.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = konfiguracja.adres,
+                onValueChange = naZmianeAdresu,
+                label = { Text("Adres serwera") },
+                placeholder = { Text("np. baza.przyklad.pl") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = konfiguracja.port,
+                onValueChange = naZmianePortu,
+                label = { Text("Port") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+            OutlinedTextField(
+                value = konfiguracja.nazwaUzytkownika,
+                onValueChange = naZmianeNazwyUzytkownika,
+                label = { Text("Nazwa użytkownika") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = konfiguracja.haslo,
+                onValueChange = naZmianeHasla,
+                label = { Text("Hasło") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = if (hasloWidoczne) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                trailingIcon = {
+                    IconButton(onClick = { hasloWidoczne = !hasloWidoczne }) {
+                        Icon(
+                            if (hasloWidoczne) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = if (hasloWidoczne) "Ukryj hasło" else "Pokaż hasło"
+                        )
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -548,6 +641,30 @@ private fun ZakladkaInformacje() {
                             context.startActivity(intencja)
                         }
                 )
+            }
+        }
+
+        Text("Historia zmian", style = MaterialTheme.typography.titleMedium)
+        HISTORIA_ZMIAN_APLIKACJI.forEach { wpis ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        "Wersja ${wpis.wersja} · ${wpis.data}",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    wpis.zmiany.forEach { zmiana ->
+                        Text(
+                            "• $zmiana",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
