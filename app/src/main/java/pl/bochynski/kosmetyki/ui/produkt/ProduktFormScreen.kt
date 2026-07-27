@@ -345,7 +345,7 @@ fun ProduktFormScreen(
                 text = {
                     Text(
                         "Znaleziono w bazie produkt \"${kandydat.marka} ${kandydat.nazwa}\". " +
-                            "Czy uzupełnić pozostałe pola (kategoria, marka, seria, linia, EAN, " +
+                            "Czy uzupełnić pozostałe pola (kategoria, marka, nazwa, seria, linia, EAN, " +
                             "pojemność, okres zużycia) na jego podstawie?"
                     )
                 },

@@ -147,6 +147,7 @@ class ProduktFormViewModel(
                 marka = kandydat.marka,
                 seria = kandydat.seria.orEmpty(),
                 linia = kandydat.linia.orEmpty(),
+                nazwa = kandydat.nazwa,
                 ean = kandydat.ean.orEmpty(),
                 pojemnosc = kandydat.pojemnosc.orEmpty(),
                 okresZuzycia = kandydat.okresZuzyciaPoOtwarciu?.toString().orEmpty(),
@@ -174,12 +175,41 @@ class ProduktFormViewModel(
             )
         }
     }
-    fun ustawEan(wartosc: String) = _stan.update { it.copy(ean = wartosc) }
+    fun ustawEan(wartosc: String) {
+        _stan.update { it.copy(ean = wartosc, blad = null) }
+        if (wartosc.length == 8 || wartosc.length == 13) {
+            wyszukajEan(wartosc)
+        }
+    }
 
     fun obsluzZeskanowanyEan(ean: String) {
-        _stan.update { it.copy(ean = ean, trwaWyszukiwanieEan = true, komunikatEan = null) }
+        _stan.update { it.copy(ean = ean) }
+        wyszukajEan(ean)
+    }
+
+    private fun wyszukajEan(ean: String) {
+        _stan.update { it.copy(trwaWyszukiwanieEan = true, komunikatEan = null) }
         viewModelScope.launch {
+            val znalezioneLokalnie = produktRepository.znajdzWszystkiePoEan(ean)
+                .filter { it.id != oryginalnyProdukt?.id }
+                .distinctBy {
+                    listOf(
+                        it.kategoriaId, it.marka, it.seria, it.linia, it.nazwa,
+                        it.pojemnosc, it.okresZuzyciaPoOtwarciu, it.jednostkaOkresuZuzycia
+                    )
+                }
+            // Pole EAN moglo sie zmienic zanim wyszukiwanie sie zakonczylo (np. przy wpisywaniu
+            // kodu znak po znaku dlugosc chwilowo mija sie z 8) - odrzucamy przeterminowany wynik.
+            if (_stan.value.ean != ean) return@launch
+            if (znalezioneLokalnie.isNotEmpty()) {
+                _stan.update {
+                    it.copy(trwaWyszukiwanieEan = false, kandydaciUzupelnienia = znalezioneLokalnie)
+                }
+                return@launch
+            }
+
             val produktZApi = OpenBeautyFactsApi.pobierzProdukt(ean)
+            if (_stan.value.ean != ean) return@launch
             _stan.update {
                 if (produktZApi == null) {
                     it.copy(
