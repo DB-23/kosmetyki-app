@@ -20,6 +20,7 @@ interface ProduktRepository {
     suspend fun dodajWiele(produkty: List<ProduktEntity>)
     suspend fun aktualizuj(produkt: ProduktEntity)
     suspend fun usun(produkt: ProduktEntity)
+    suspend fun usunWszystkie()
 }
 
 class ProduktRepositoryImpl(
@@ -56,4 +57,6 @@ class ProduktRepositoryImpl(
     override suspend fun aktualizuj(produkt: ProduktEntity) = dao.aktualizuj(produkt)
 
     override suspend fun usun(produkt: ProduktEntity) = dao.usun(produkt)
+
+    override suspend fun usunWszystkie() = dao.usunWszystkie()
 }

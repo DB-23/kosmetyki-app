@@ -39,6 +39,7 @@ import pl.bochynski.kosmetyki.ui.produktdetal.ProduktDetalRoute
 import pl.bochynski.kosmetyki.ui.pulpit.PulpitRoute
 import pl.bochynski.kosmetyki.ui.skaner.SkanerEanRoute
 import pl.bochynski.kosmetyki.ui.sprawdzkod.SprawdzKodRoute
+import pl.bochynski.kosmetyki.ui.sprawdzkod.SprawdzKodWejscieRoute
 import pl.bochynski.kosmetyki.ui.ustawienia.UstawieniaRoute
 import pl.bochynski.kosmetyki.ui.zapasy.ZapasyRoute
 
@@ -62,6 +63,7 @@ private object KosmetykiRoutes {
     const val FILTROWANA_LISTA_BAZA = "filtrowanaLista"
     const val FILTROWANA_LISTA = "$FILTROWANA_LISTA_BAZA/{$ARG_RODZAJ_FILTRA}"
     const val SKANER_EAN = "skanerEan"
+    const val SPRAWDZ_KOD_WEJSCIE = "sprawdzKodWejscie"
     const val SPRAWDZ_KOD_SKANER = "sprawdzKodSkaner"
     const val SPRAWDZ_KOD_WYNIK_BAZA = "sprawdzKodWynik"
     const val SPRAWDZ_KOD_WYNIK = "$SPRAWDZ_KOD_WYNIK_BAZA/{$ARG_EAN}"
@@ -139,7 +141,7 @@ fun KosmetykiNavHost(
                     naUstawienia = { navController.navigate(KosmetykiRoutes.USTAWIENIA) },
                     naListaFiltrowana = { rodzaj -> navController.navigate(KosmetykiRoutes.filtrowanaLista(rodzaj)) },
                     naOtwarte = { navController.navigate(KosmetykiRoutes.OTWARTE) },
-                    naSprawdzKod = { navController.navigate(KosmetykiRoutes.SPRAWDZ_KOD_SKANER) }
+                    naSprawdzKod = { navController.navigate(KosmetykiRoutes.SPRAWDZ_KOD_WEJSCIE) }
                 )
             }
             composable(
@@ -160,6 +162,8 @@ fun KosmetykiNavHost(
             composable(KosmetykiRoutes.USTAWIENIA) {
                 UstawieniaRoute(
                     ustawieniaRepository = ustawieniaRepository,
+                    produktRepository = produktRepository,
+                    kategoriaRepository = kategoriaRepository,
                     naWstecz = { navController.popBackStack() }
                 )
             }
@@ -223,6 +227,13 @@ fun KosmetykiNavHost(
                         navController.popBackStack()
                     },
                     naWstecz = { navController.popBackStack() }
+                )
+            }
+            composable(KosmetykiRoutes.SPRAWDZ_KOD_WEJSCIE) {
+                SprawdzKodWejscieRoute(
+                    naWstecz = { navController.popBackStack() },
+                    naSkanuj = { navController.navigate(KosmetykiRoutes.SPRAWDZ_KOD_SKANER) },
+                    naSzukaj = { ean -> navController.navigate(KosmetykiRoutes.sprawdzKodWynik(ean)) }
                 )
             }
             composable(KosmetykiRoutes.SPRAWDZ_KOD_SKANER) {

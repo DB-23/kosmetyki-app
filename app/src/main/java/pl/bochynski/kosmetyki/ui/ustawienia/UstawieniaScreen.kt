@@ -1,6 +1,7 @@
 package pl.bochynski.kosmetyki.ui.ustawienia
 
 import android.Manifest
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -28,11 +29,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -63,18 +67,25 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.bochynski.kosmetyki.data.repository.DOMYSLNE_KOLORY_STATUSOW
+import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.KoloryStatusow
+import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.StatusKolorowy
 import pl.bochynski.kosmetyki.data.repository.TrybMotywu
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
+import java.time.LocalDate
 
 @Composable
 fun UstawieniaRoute(
     ustawieniaRepository: UstawieniaRepository,
+    produktRepository: ProduktRepository,
+    kategoriaRepository: KategoriaRepository,
     naWstecz: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val viewModel: UstawieniaViewModel = viewModel(factory = UstawieniaViewModelFactory(ustawieniaRepository))
+    val viewModel: UstawieniaViewModel = viewModel(
+        factory = UstawieniaViewModelFactory(ustawieniaRepository, produktRepository, kategoriaRepository)
+    )
     val stan by viewModel.stan.collectAsState()
 
     UstawieniaScreen(
@@ -83,6 +94,10 @@ fun UstawieniaRoute(
         naZmianeProguDni = viewModel::ustawProgDni,
         naZmianeTrybuMotywu = viewModel::ustawTrybMotywu,
         naZmianeKoloruStatusu = viewModel::ustawKolorStatusu,
+        naWyzerujBaze = viewModel::wyzerujBaze,
+        naEksportujDoPliku = viewModel::eksportujDoPliku,
+        naImportujZPliku = viewModel::importujZPliku,
+        naZamknijKomunikatBazy = viewModel::wyczyscKomunikatBazy,
         modifier = modifier
     )
 }
@@ -95,10 +110,27 @@ fun UstawieniaScreen(
     naZmianeProguDni: (String) -> Unit,
     naZmianeTrybuMotywu: (TrybMotywu) -> Unit,
     naZmianeKoloruStatusu: (StatusKolorowy, Int) -> Unit,
+    naWyzerujBaze: () -> Unit,
+    naEksportujDoPliku: (ContentResolver, Uri) -> Unit,
+    naImportujZPliku: (ContentResolver, Uri) -> Unit,
+    naZamknijKomunikatBazy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var uprawnienieWlaczone by remember { mutableStateOf(sprawdzUprawnienie(context)) }
+    var pokazDialogResetu by remember { mutableStateOf(false) }
+
+    val launcherEksportu = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> if (uri != null) naEksportujDoPliku(context.contentResolver, uri) }
+
+    val launcherImportu = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) naImportujZPliku(context.contentResolver, uri) }
+
+    DisposableEffect(Unit) {
+        onDispose { naZamknijKomunikatBazy() }
+    }
 
     val launcherUprawnienia = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -251,9 +283,92 @@ fun UstawieniaScreen(
                     )
                 }
             }
+
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Zarządzanie bazą danych", style = MaterialTheme.typography.titleMedium)
+
+                    if (stan.trwaOperacjaBazy) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Text("Przetwarzanie...", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    stan.komunikatBazy?.let { komunikat ->
+                        Text(
+                            komunikat,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            launcherEksportu.launch("kosmetyki-kopia-zapasowa-${LocalDate.now()}.json")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !stan.trwaOperacjaBazy
+                    ) {
+                        Text("Eksportuj do pliku")
+                    }
+                    OutlinedButton(
+                        onClick = { launcherImportu.launch(arrayOf("application/json")) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !stan.trwaOperacjaBazy
+                    ) {
+                        Text("Importuj z pliku")
+                    }
+                    Text(
+                        "Import dodaje produkty z pliku do obecnej bazy (nie nadpisuje istniejących danych).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedButton(
+                        onClick = { pokazDialogResetu = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !stan.trwaOperacjaBazy,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Wyzeruj bazę danych")
+                    }
+                }
+            }
         }
             }
         }
+    }
+
+    if (pokazDialogResetu) {
+        AlertDialog(
+            onDismissRequest = { pokazDialogResetu = false },
+            title = { Text("Wyzerować bazę danych?") },
+            text = {
+                Text(
+                    "Wszystkie produkty zostaną trwale usunięte z aplikacji. Tej operacji nie można cofnąć. " +
+                        "Rozważ wcześniejszy eksport danych do pliku."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    naWyzerujBaze()
+                    pokazDialogResetu = false
+                }) { Text("Wyzeruj") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pokazDialogResetu = false }) { Text("Anuluj") }
+            }
+        )
     }
 
     edytowanyStatus?.let { status ->

@@ -56,6 +56,9 @@ interface ProduktDao {
     @Query("SELECT * FROM produkty WHERE ean = :ean ORDER BY dataDodania DESC")
     suspend fun znajdzWszystkiePoEan(ean: String): List<ProduktEntity>
 
+    @Query("DELETE FROM produkty")
+    suspend fun usunWszystkie()
+
     @Query("SELECT * FROM produkty WHERE ulubiony = 1 ORDER BY marka, nazwa")
     fun obserwujUlubione(): Flow<List<ProduktEntity>>
 }

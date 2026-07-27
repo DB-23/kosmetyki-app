@@ -1,15 +1,23 @@
 package pl.bochynski.kosmetyki.ui.ustawienia
 
+import android.content.ContentResolver
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import pl.bochynski.kosmetyki.data.backup.KopiaZapasowaProduktow
 import pl.bochynski.kosmetyki.data.repository.DOMYSLNE_KOLORY_STATUSOW
+import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.KoloryStatusow
+import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.StatusKolorowy
 import pl.bochynski.kosmetyki.data.repository.TrybMotywu
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
@@ -19,11 +27,15 @@ data class UstawieniaUiState(
     val blad: String? = null,
     val trybMotywu: TrybMotywu = TrybMotywu.SYSTEMOWY,
     val koloryStatusow: KoloryStatusow = DOMYSLNE_KOLORY_STATUSOW,
-    val trwaLadowanie: Boolean = true
+    val trwaLadowanie: Boolean = true,
+    val trwaOperacjaBazy: Boolean = false,
+    val komunikatBazy: String? = null
 )
 
 class UstawieniaViewModel(
-    private val ustawieniaRepository: UstawieniaRepository
+    private val ustawieniaRepository: UstawieniaRepository,
+    private val produktRepository: ProduktRepository,
+    private val kategoriaRepository: KategoriaRepository
 ) : ViewModel() {
 
     private val _stan = MutableStateFlow(UstawieniaUiState())
@@ -66,13 +78,88 @@ class UstawieniaViewModel(
     fun ustawKolorStatusu(status: StatusKolorowy, kolorArgb: Int) {
         viewModelScope.launch { ustawieniaRepository.ustawKolorStatusu(status, kolorArgb) }
     }
+
+    fun wyzerujBaze() {
+        _stan.update { it.copy(trwaOperacjaBazy = true, komunikatBazy = null) }
+        viewModelScope.launch {
+            produktRepository.usunWszystkie()
+            _stan.update {
+                it.copy(trwaOperacjaBazy = false, komunikatBazy = "Baza danych została wyzerowana.")
+            }
+        }
+    }
+
+    fun eksportujDoPliku(resolver: ContentResolver, uri: Uri) {
+        _stan.update { it.copy(trwaOperacjaBazy = true, komunikatBazy = null) }
+        viewModelScope.launch {
+            val wynik = runCatching {
+                val produkty = produktRepository.obserwujWszystkieProdukty().first()
+                val kategorie = kategoriaRepository.obserwujKategorie().first()
+                val tekst = KopiaZapasowaProduktow.zserializuj(produkty, kategorie)
+                withContext(Dispatchers.IO) {
+                    resolver.openOutputStream(uri)?.use { strumien ->
+                        strumien.write(tekst.toByteArray())
+                    } ?: error("Nie udało się otworzyć pliku do zapisu")
+                }
+                produkty.size
+            }
+            _stan.update {
+                it.copy(
+                    trwaOperacjaBazy = false,
+                    komunikatBazy = wynik.fold(
+                        onSuccess = { liczba -> "Wyeksportowano $liczba produktów do pliku." },
+                        onFailure = { blad -> "Eksport nie powiódł się: ${blad.message}" }
+                    )
+                )
+            }
+        }
+    }
+
+    fun importujZPliku(resolver: ContentResolver, uri: Uri) {
+        _stan.update { it.copy(trwaOperacjaBazy = true, komunikatBazy = null) }
+        viewModelScope.launch {
+            val wynik = runCatching {
+                val tekst = withContext(Dispatchers.IO) {
+                    resolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                        ?: error("Nie udało się otworzyć pliku do odczytu")
+                }
+                val kategorie = kategoriaRepository.obserwujKategorie().first()
+                val odczyt = KopiaZapasowaProduktow.odczytaj(tekst, kategorie)
+                if (odczyt.produkty.isNotEmpty()) {
+                    produktRepository.dodajWiele(odczyt.produkty)
+                }
+                odczyt
+            }
+            _stan.update {
+                it.copy(
+                    trwaOperacjaBazy = false,
+                    komunikatBazy = wynik.fold(
+                        onSuccess = { odczyt ->
+                            val podstawowy = "Zaimportowano ${odczyt.produkty.size} produktów."
+                            if (odczyt.pominieteBrakKategorii > 0) {
+                                "$podstawowy Pominięto ${odczyt.pominieteBrakKategorii} " +
+                                    "(nierozpoznana kategoria)."
+                            } else {
+                                podstawowy
+                            }
+                        },
+                        onFailure = { blad -> "Import nie powiódł się: ${blad.message}" }
+                    )
+                )
+            }
+        }
+    }
+
+    fun wyczyscKomunikatBazy() = _stan.update { it.copy(komunikatBazy = null) }
 }
 
 class UstawieniaViewModelFactory(
-    private val ustawieniaRepository: UstawieniaRepository
+    private val ustawieniaRepository: UstawieniaRepository,
+    private val produktRepository: ProduktRepository,
+    private val kategoriaRepository: KategoriaRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return UstawieniaViewModel(ustawieniaRepository) as T
+        return UstawieniaViewModel(ustawieniaRepository, produktRepository, kategoriaRepository) as T
     }
 }
