@@ -75,12 +75,15 @@ class HistoriaCenViewModel(
         } else {
             wszystkieProdukty.filter { kandydat.odpowiadaProduktowi(it) }
         }
+        // Wykres wymaga daty zakupu (punkt na osi czasu), ale srednia cena i najczestsze miejsce
+        // zakupu nie powinny znikac tylko dlatego, ze data zakupu nie zostala podana.
         val punkty = dopasowane
             .filter { it.cenaZakupu != null && it.dataZakupu != null }
             .map { PunktCeny(it.dataZakupu!!, it.cenaZakupu!!, it.miejsceZakupu) }
             .sortedBy { it.data }
-        val sredniaCena = punkty.map { it.cena }.takeIf { it.isNotEmpty() }?.let { it.sum() / it.size }
-        val najczestszeMiejsce = punkty
+        val sredniaCena = dopasowane.mapNotNull { it.cenaZakupu }.takeIf { it.isNotEmpty() }
+            ?.let { it.sum() / it.size }
+        val najczestszeMiejsce = dopasowane
             .mapNotNull { it.miejsceZakupu?.takeIf { m -> m.isNotBlank() } }
             .groupBy { it }
             .maxByOrNull { it.value.size }

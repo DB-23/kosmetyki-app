@@ -42,13 +42,15 @@ class SprawdzKodViewModel(
             val lokalne = produktRepository.znajdzWszystkiePoEan(ean)
             if (lokalne.isNotEmpty()) {
                 val ostatni = lokalne.maxBy { it.dataDodania }
+                // Wykres wymaga daty zakupu (punkt na osi czasu), ale srednia cena i najczestsze
+                // miejsce zakupu nie powinny znikac tylko dlatego, ze data zakupu nie zostala podana.
                 val punkty = lokalne
                     .filter { it.cenaZakupu != null && it.dataZakupu != null }
                     .map { PunktCeny(it.dataZakupu!!, it.cenaZakupu!!, it.miejsceZakupu) }
                     .sortedBy { it.data }
-                val sredniaCena = punkty.map { it.cena }.takeIf { it.isNotEmpty() }
+                val sredniaCena = lokalne.mapNotNull { it.cenaZakupu }.takeIf { it.isNotEmpty() }
                     ?.let { it.sum() / it.size }
-                val najczestszeMiejsce = punkty
+                val najczestszeMiejsce = lokalne
                     .mapNotNull { it.miejsceZakupu?.takeIf { m -> m.isNotBlank() } }
                     .groupBy { it }
                     .maxByOrNull { it.value.size }
