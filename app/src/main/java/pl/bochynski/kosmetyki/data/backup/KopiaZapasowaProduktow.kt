@@ -3,6 +3,7 @@ package pl.bochynski.kosmetyki.data.backup
 import org.json.JSONArray
 import org.json.JSONObject
 import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaPojemnosci
 import pl.bochynski.kosmetyki.data.local.entity.KategoriaEntity
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
 import pl.bochynski.kosmetyki.data.local.entity.StatusProduktu
@@ -26,6 +27,7 @@ object KopiaZapasowaProduktow {
             json.put("nazwa", produkt.nazwa)
             json.put("ean", produkt.ean)
             json.put("pojemnosc", produkt.pojemnosc)
+            json.put("jednostkaPojemnosci", produkt.jednostkaPojemnosci.name)
             json.put("dataWaznosci", produkt.dataWaznosci?.toString())
             json.put("okresZuzyciaPoOtwarciu", produkt.okresZuzyciaPoOtwarciu)
             json.put("jednostkaOkresuZuzycia", produkt.jednostkaOkresuZuzycia.name)
@@ -68,7 +70,14 @@ object KopiaZapasowaProduktow {
                     linia = json.optStringOrNull("linia"),
                     nazwa = json.optString("nazwa"),
                     ean = json.optStringOrNull("ean"),
-                    pojemnosc = json.optStringOrNull("pojemnosc"),
+                    pojemnosc = if (json.isNull("pojemnosc") || !json.has("pojemnosc")) {
+                        null
+                    } else {
+                        json.optDouble("pojemnosc").takeIf { !it.isNaN() }
+                    },
+                    jednostkaPojemnosci = runCatching {
+                        JednostkaPojemnosci.valueOf(json.optString("jednostkaPojemnosci"))
+                    }.getOrDefault(JednostkaPojemnosci.ML),
                     dataWaznosci = json.optLocalDateOrNull("dataWaznosci"),
                     okresZuzyciaPoOtwarciu = json.optIntOrNull("okresZuzyciaPoOtwarciu"),
                     jednostkaOkresuZuzycia = runCatching {

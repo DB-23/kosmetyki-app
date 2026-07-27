@@ -2,6 +2,7 @@ package pl.bochynski.kosmetyki.data.local
 
 import androidx.room.TypeConverter
 import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaPojemnosci
 import pl.bochynski.kosmetyki.data.local.entity.StatusProduktu
 import java.time.LocalDate
 
@@ -23,4 +24,10 @@ class Converters {
 
     @TypeConverter
     fun doJednostki(wartosc: String): JednostkaOkresuZuzycia = JednostkaOkresuZuzycia.valueOf(wartosc)
+
+    @TypeConverter
+    fun zJednostkiPojemnosci(jednostka: JednostkaPojemnosci): String = jednostka.name
+
+    @TypeConverter
+    fun doJednostkiPojemnosci(wartosc: String): JednostkaPojemnosci = JednostkaPojemnosci.valueOf(wartosc)
 }

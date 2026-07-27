@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaPojemnosci
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
 import pl.bochynski.kosmetyki.data.local.entity.StatusProduktu
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
@@ -119,7 +120,7 @@ fun ProduktDetalScreen(
                 PolePodgladu("Linia", produkt.linia)
                 PolePodgladu("Nazwa", produkt.nazwa)
                 PolePodgladu("Kod EAN", produkt.ean)
-                PolePodgladu("Pojemność", produkt.pojemnosc)
+                PolePodgladu("Pojemność", opisPojemnosci(produkt))
                 PolePodgladu("Data ważności", produkt.dataWaznosci?.format(FORMAT_DATY))
                 PolePodgladu("Okres zużycia po otwarciu", opisOkresuZuzycia(produkt))
                 PolePodgladu("Status", opisStatusu(produkt.status))
@@ -136,6 +137,20 @@ fun ProduktDetalScreen(
 }
 
 private val FORMAT_DATY = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+
+private fun opisPojemnosci(produkt: ProduktEntity): String? {
+    val pojemnosc = produkt.pojemnosc ?: return null
+    val liczba = if (pojemnosc == pojemnosc.toLong().toDouble()) {
+        pojemnosc.toLong().toString()
+    } else {
+        pojemnosc.toString()
+    }
+    val jednostka = when (produkt.jednostkaPojemnosci) {
+        JednostkaPojemnosci.ML -> "ml"
+        JednostkaPojemnosci.G -> "g"
+    }
+    return "$liczba $jednostka"
+}
 
 private fun opisOkresuZuzycia(produkt: ProduktEntity): String? {
     val okres = produkt.okresZuzyciaPoOtwarciu ?: return null

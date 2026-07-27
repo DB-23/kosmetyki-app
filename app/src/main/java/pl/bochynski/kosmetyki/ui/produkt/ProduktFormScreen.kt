@@ -53,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaPojemnosci
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepository
@@ -103,6 +104,7 @@ fun ProduktFormRoute(
         naWybierzZUlubionych = viewModel::wybierzZUlubionych,
         naZmianeEan = viewModel::ustawEan,
         naZmianePojemnosci = viewModel::ustawPojemnosc,
+        naZmianeJednostkiPojemnosci = viewModel::ustawJednostkePojemnosci,
         naZmianeDatyWaznosci = viewModel::ustawDateWaznosci,
         naZmianeOkresuZuzycia = viewModel::ustawOkresZuzycia,
         naZmianeJednostki = viewModel::ustawJednostkeOkresu,
@@ -133,6 +135,7 @@ fun ProduktFormScreen(
     naWybierzZUlubionych: (ProduktEntity) -> Unit,
     naZmianeEan: (String) -> Unit,
     naZmianePojemnosci: (String) -> Unit,
+    naZmianeJednostkiPojemnosci: (JednostkaPojemnosci) -> Unit,
     naZmianeDatyWaznosci: (LocalDate?) -> Unit,
     naZmianeOkresuZuzycia: (String) -> Unit,
     naZmianeJednostki: (JednostkaOkresuZuzycia) -> Unit,
@@ -258,10 +261,23 @@ fun ProduktFormScreen(
                     value = stan.pojemnosc,
                     onValueChange = naZmianePojemnosci,
                     label = { Text("Pojemność") },
-                    placeholder = { Text("np. 50 ml") },
+                    placeholder = { Text("np. 50") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = stan.jednostkaPojemnosci == JednostkaPojemnosci.ML,
+                        onClick = { naZmianeJednostkiPojemnosci(JednostkaPojemnosci.ML) },
+                        label = { Text("ml") }
+                    )
+                    FilterChip(
+                        selected = stan.jednostkaPojemnosci == JednostkaPojemnosci.G,
+                        onClick = { naZmianeJednostkiPojemnosci(JednostkaPojemnosci.G) },
+                        label = { Text("g") }
+                    )
+                }
 
                 PoleDaty(etykieta = "Data ważności", data = stan.dataWaznosci, naZmiane = naZmianeDatyWaznosci)
 
@@ -407,6 +423,20 @@ fun ProduktFormScreen(
     }
 }
 
+private fun formatujPojemnosc(pojemnosc: Double?, jednostka: JednostkaPojemnosci): String? {
+    if (pojemnosc == null) return null
+    val liczba = if (pojemnosc == pojemnosc.toLong().toDouble()) {
+        pojemnosc.toLong().toString()
+    } else {
+        pojemnosc.toString()
+    }
+    val etykietaJednostki = when (jednostka) {
+        JednostkaPojemnosci.ML -> "ml"
+        JednostkaPojemnosci.G -> "g"
+    }
+    return "$liczba $etykietaJednostki"
+}
+
 @Composable
 private fun KandydatUzupelnienia(
     kandydat: ProduktEntity,
@@ -421,7 +451,7 @@ private fun KandydatUzupelnienia(
     val tytul = if (naglowek.isBlank()) kandydat.nazwa else "$naglowek – ${kandydat.nazwa}"
     val szczegoly = listOfNotNull(
         nazwaKategorii,
-        kandydat.pojemnosc?.takeIf { it.isNotBlank() }
+        formatujPojemnosc(kandydat.pojemnosc, kandydat.jednostkaPojemnosci)
     ).joinToString(" · ")
 
     Column(

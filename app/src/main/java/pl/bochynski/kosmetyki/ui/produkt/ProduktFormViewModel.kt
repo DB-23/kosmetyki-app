@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pl.bochynski.kosmetyki.data.local.entity.JednostkaOkresuZuzycia
+import pl.bochynski.kosmetyki.data.local.entity.JednostkaPojemnosci
 import pl.bochynski.kosmetyki.data.local.entity.KategoriaEntity
 import pl.bochynski.kosmetyki.data.local.entity.ProduktEntity
 import pl.bochynski.kosmetyki.data.remote.OpenBeautyFactsApi
@@ -28,6 +29,7 @@ data class ProduktFormUiState(
     val nazwa: String = "",
     val ean: String = "",
     val pojemnosc: String = "",
+    val jednostkaPojemnosci: JednostkaPojemnosci = JednostkaPojemnosci.ML,
     val dataWaznosci: LocalDate? = null,
     val okresZuzycia: String = "",
     val jednostkaOkresuZuzycia: JednostkaOkresuZuzycia = JednostkaOkresuZuzycia.MIESIACE,
@@ -98,7 +100,8 @@ class ProduktFormViewModel(
                             linia = produkt.linia.orEmpty(),
                             nazwa = produkt.nazwa,
                             ean = produkt.ean.orEmpty(),
-                            pojemnosc = produkt.pojemnosc.orEmpty(),
+                            pojemnosc = produkt.pojemnosc?.let(::formatujLiczbe).orEmpty(),
+                            jednostkaPojemnosci = produkt.jednostkaPojemnosci,
                             dataWaznosci = produkt.dataWaznosci,
                             okresZuzycia = produkt.okresZuzyciaPoOtwarciu?.toString().orEmpty(),
                             jednostkaOkresuZuzycia = produkt.jednostkaOkresuZuzycia,
@@ -131,7 +134,7 @@ class ProduktFormViewModel(
                 .distinctBy {
                     listOf(
                         it.kategoriaId, it.marka, it.seria, it.linia, it.ean,
-                        it.pojemnosc, it.okresZuzyciaPoOtwarciu, it.jednostkaOkresuZuzycia
+                        it.pojemnosc, it.jednostkaPojemnosci, it.okresZuzyciaPoOtwarciu, it.jednostkaOkresuZuzycia
                     )
                 }
             if (znalezione.isNotEmpty()) {
@@ -149,7 +152,8 @@ class ProduktFormViewModel(
                 linia = kandydat.linia.orEmpty(),
                 nazwa = kandydat.nazwa,
                 ean = kandydat.ean.orEmpty(),
-                pojemnosc = kandydat.pojemnosc.orEmpty(),
+                pojemnosc = kandydat.pojemnosc?.let(::formatujLiczbe).orEmpty(),
+                jednostkaPojemnosci = kandydat.jednostkaPojemnosci,
                 okresZuzycia = kandydat.okresZuzyciaPoOtwarciu?.toString().orEmpty(),
                 jednostkaOkresuZuzycia = kandydat.jednostkaOkresuZuzycia,
                 kandydaciUzupelnienia = emptyList()
@@ -168,7 +172,8 @@ class ProduktFormViewModel(
                 linia = produkt.linia.orEmpty(),
                 nazwa = produkt.nazwa,
                 ean = produkt.ean.orEmpty(),
-                pojemnosc = produkt.pojemnosc.orEmpty(),
+                pojemnosc = produkt.pojemnosc?.let(::formatujLiczbe).orEmpty(),
+                jednostkaPojemnosci = produkt.jednostkaPojemnosci,
                 okresZuzycia = produkt.okresZuzyciaPoOtwarciu?.toString().orEmpty(),
                 jednostkaOkresuZuzycia = produkt.jednostkaOkresuZuzycia,
                 blad = null
@@ -195,7 +200,7 @@ class ProduktFormViewModel(
                 .distinctBy {
                     listOf(
                         it.kategoriaId, it.marka, it.seria, it.linia, it.nazwa,
-                        it.pojemnosc, it.okresZuzyciaPoOtwarciu, it.jednostkaOkresuZuzycia
+                        it.pojemnosc, it.jednostkaPojemnosci, it.okresZuzyciaPoOtwarciu, it.jednostkaOkresuZuzycia
                     )
                 }
             // Pole EAN moglo sie zmienic zanim wyszukiwanie sie zakonczylo (np. przy wpisywaniu
@@ -227,7 +232,9 @@ class ProduktFormViewModel(
             }
         }
     }
-    fun ustawPojemnosc(wartosc: String) = _stan.update { it.copy(pojemnosc = wartosc) }
+    fun ustawPojemnosc(wartosc: String) = _stan.update { it.copy(pojemnosc = wartosc, blad = null) }
+    fun ustawJednostkePojemnosci(jednostka: JednostkaPojemnosci) =
+        _stan.update { it.copy(jednostkaPojemnosci = jednostka) }
     fun ustawDateWaznosci(data: LocalDate?) = _stan.update { it.copy(dataWaznosci = data) }
     fun ustawOkresZuzycia(wartosc: String) = _stan.update { it.copy(okresZuzycia = wartosc, blad = null) }
     fun ustawJednostkeOkresu(jednostka: JednostkaOkresuZuzycia) =
@@ -263,6 +270,11 @@ class ProduktFormViewModel(
             _stan.update { it.copy(blad = "Cena zakupu musi być liczbą") }
             return
         }
+        val pojemnosc = aktualny.pojemnosc.trim().replace(',', '.').takeIf { it.isNotBlank() }?.toDoubleOrNull()
+        if (aktualny.pojemnosc.isNotBlank() && pojemnosc == null) {
+            _stan.update { it.copy(blad = "Pojemność musi być liczbą") }
+            return
+        }
         val liczbaSztuk = if (aktualny.trybEdycji) 1 else aktualny.liczbaSztuk.trim().toIntOrNull()
         if (!aktualny.trybEdycji && (liczbaSztuk == null || liczbaSztuk < 1)) {
             _stan.update { it.copy(blad = "Liczba sztuk musi być liczbą całkowitą większą od zera") }
@@ -279,7 +291,8 @@ class ProduktFormViewModel(
                 nazwa = aktualny.nazwa.trim(),
                 ean = aktualny.ean.trim().ifBlank { null },
                 zdjecieUri = oryginalnyProdukt?.zdjecieUri,
-                pojemnosc = aktualny.pojemnosc.trim().ifBlank { null },
+                pojemnosc = pojemnosc,
+                jednostkaPojemnosci = aktualny.jednostkaPojemnosci,
                 dataWaznosci = aktualny.dataWaznosci,
                 okresZuzyciaPoOtwarciu = okresZuzycia,
                 jednostkaOkresuZuzycia = aktualny.jednostkaOkresuZuzycia,
@@ -308,6 +321,9 @@ class ProduktFormViewModel(
         }
     }
 }
+
+private fun formatujLiczbe(wartosc: Double): String =
+    if (wartosc == wartosc.toLong().toDouble()) wartosc.toLong().toString() else wartosc.toString()
 
 class ProduktFormViewModelFactory(
     private val produktId: Long?,
