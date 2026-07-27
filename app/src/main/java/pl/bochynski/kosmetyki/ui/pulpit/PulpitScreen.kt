@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -43,6 +44,7 @@ fun PulpitRoute(
     naUstawienia: () -> Unit,
     naListaFiltrowana: (RodzajFiltra) -> Unit,
     naOtwarte: () -> Unit,
+    naSprawdzKod: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: PulpitViewModel = viewModel(factory = PulpitViewModelFactory(produktRepository))
@@ -54,6 +56,7 @@ fun PulpitRoute(
         naUstawienia = naUstawienia,
         naListaFiltrowana = naListaFiltrowana,
         naOtwarte = naOtwarte,
+        naSprawdzKod = naSprawdzKod,
         modifier = modifier
     )
 }
@@ -66,6 +69,7 @@ fun PulpitScreen(
     naUstawienia: () -> Unit,
     naListaFiltrowana: (RodzajFiltra) -> Unit,
     naOtwarte: () -> Unit,
+    naSprawdzKod: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -165,6 +169,7 @@ fun PulpitScreen(
                 )
 
                 KartaHistoriiCen(naKlikniecie = naHistorieCen)
+                KartaSprawdzKod(naKlikniecie = naSprawdzKod)
             }
         }
     }
@@ -220,6 +225,29 @@ private fun KartaHistoriiCen(naKlikniecie: () -> Unit) {
         ) {
             Icon(Icons.AutoMirrored.Filled.ShowChart, contentDescription = null)
             Text("Historia cen", style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+@Composable
+private fun KartaSprawdzKod(naKlikniecie: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = naKlikniecie,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.Filled.QrCodeScanner, contentDescription = null)
+            Text("Sprawdź kod kreskowy", style = MaterialTheme.typography.titleMedium)
         }
     }
 }

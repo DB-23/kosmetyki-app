@@ -38,11 +38,13 @@ import pl.bochynski.kosmetyki.ui.produkt.ProduktFormRoute
 import pl.bochynski.kosmetyki.ui.produktdetal.ProduktDetalRoute
 import pl.bochynski.kosmetyki.ui.pulpit.PulpitRoute
 import pl.bochynski.kosmetyki.ui.skaner.SkanerEanRoute
+import pl.bochynski.kosmetyki.ui.sprawdzkod.SprawdzKodRoute
 import pl.bochynski.kosmetyki.ui.ustawienia.UstawieniaRoute
 import pl.bochynski.kosmetyki.ui.zapasy.ZapasyRoute
 
 private const val ARG_PRODUKT_ID = "produktId"
 private const val ARG_RODZAJ_FILTRA = "rodzajFiltra"
+private const val ARG_EAN = "ean"
 private const val KLUCZ_ZESKANOWANY_EAN = "zeskanowanyEan"
 private const val BEZ_PRODUKTU = -1L
 
@@ -60,6 +62,9 @@ private object KosmetykiRoutes {
     const val FILTROWANA_LISTA_BAZA = "filtrowanaLista"
     const val FILTROWANA_LISTA = "$FILTROWANA_LISTA_BAZA/{$ARG_RODZAJ_FILTRA}"
     const val SKANER_EAN = "skanerEan"
+    const val SPRAWDZ_KOD_SKANER = "sprawdzKodSkaner"
+    const val SPRAWDZ_KOD_WYNIK_BAZA = "sprawdzKodWynik"
+    const val SPRAWDZ_KOD_WYNIK = "$SPRAWDZ_KOD_WYNIK_BAZA/{$ARG_EAN}"
 
     fun produktForm(produktId: Long? = null) =
         "$PRODUKT_FORM_BAZA?$ARG_PRODUKT_ID=${produktId ?: BEZ_PRODUKTU}"
@@ -67,6 +72,8 @@ private object KosmetykiRoutes {
     fun produktDetal(produktId: Long) = "$PRODUKT_DETAL_BAZA/$produktId"
 
     fun filtrowanaLista(rodzaj: RodzajFiltra) = "$FILTROWANA_LISTA_BAZA/${rodzaj.name}"
+
+    fun sprawdzKodWynik(ean: String) = "$SPRAWDZ_KOD_WYNIK_BAZA/$ean"
 }
 
 private data class PozycjaNawigacji(val trasa: String, val etykieta: String, val ikona: ImageVector)
@@ -131,7 +138,8 @@ fun KosmetykiNavHost(
                     naHistorieCen = { navController.navigate(KosmetykiRoutes.HISTORIA_CEN) },
                     naUstawienia = { navController.navigate(KosmetykiRoutes.USTAWIENIA) },
                     naListaFiltrowana = { rodzaj -> navController.navigate(KosmetykiRoutes.filtrowanaLista(rodzaj)) },
-                    naOtwarte = { navController.navigate(KosmetykiRoutes.OTWARTE) }
+                    naOtwarte = { navController.navigate(KosmetykiRoutes.OTWARTE) },
+                    naSprawdzKod = { navController.navigate(KosmetykiRoutes.SPRAWDZ_KOD_SKANER) }
                 )
             }
             composable(
@@ -215,6 +223,33 @@ fun KosmetykiNavHost(
                         navController.popBackStack()
                     },
                     naWstecz = { navController.popBackStack() }
+                )
+            }
+            composable(KosmetykiRoutes.SPRAWDZ_KOD_SKANER) {
+                SkanerEanRoute(
+                    naZeskanowano = { kod ->
+                        navController.navigate(KosmetykiRoutes.sprawdzKodWynik(kod)) {
+                            popUpTo(KosmetykiRoutes.SPRAWDZ_KOD_SKANER) { inclusive = true }
+                        }
+                    },
+                    naWstecz = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = KosmetykiRoutes.SPRAWDZ_KOD_WYNIK,
+                arguments = listOf(navArgument(ARG_EAN) { type = NavType.StringType })
+            ) { backStackEntry ->
+                val ean = backStackEntry.arguments?.getString(ARG_EAN).orEmpty()
+                SprawdzKodRoute(
+                    ean = ean,
+                    produktRepository = produktRepository,
+                    naWstecz = { navController.popBackStack() },
+                    naDodajProdukt = { eanDoDodania ->
+                        navController.navigate(KosmetykiRoutes.produktForm())
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set(KLUCZ_ZESKANOWANY_EAN, eanDoDodania)
+                    }
                 )
             }
             composable(
