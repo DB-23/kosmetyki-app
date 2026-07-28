@@ -15,6 +15,7 @@ import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.ProduktRepositoryImpl
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepositoryImpl
+import pl.bochynski.kosmetyki.data.seed.DatabaseSeeder
 import pl.bochynski.kosmetyki.powiadomienia.ID_KANALU_POWIADOMIEN
 import pl.bochynski.kosmetyki.powiadomienia.KosmetykiWorkerFactory
 import pl.bochynski.kosmetyki.powiadomienia.PowiadomieniaWorker
@@ -27,6 +28,7 @@ class KosmetykiApplication : Application(), Configuration.Provider {
     val kategoriaRepository: KategoriaRepository by lazy { KategoriaRepositoryImpl(baza.kategoriaDao()) }
     val produktRepository: ProduktRepository by lazy { ProduktRepositoryImpl(baza.produktDao()) }
     val ustawieniaRepository: UstawieniaRepository by lazy { UstawieniaRepositoryImpl(this) }
+    val databaseSeeder: DatabaseSeeder by lazy { DatabaseSeeder(this, baza) }
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()

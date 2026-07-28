@@ -49,20 +49,50 @@ class DatabaseSeeder(
                 idKategoriiPoNazwie[nazwa] = id
             }
 
-            val elementySeeda = wczytajSeed()
-            val produkty = elementySeeda.mapNotNull { element ->
-                val nazwaKategorii = MAPOWANIE_KATEGORII_SEEDA[element.kategoria] ?: element.kategoria
-                val kategoriaId = idKategoriiPoNazwie[nazwaKategorii]
-                if (kategoriaId == null) {
-                    Log.w(TAG, "Pominięto produkt \"${element.kosmetyk}\" — nieznana kategoria: ${element.kategoria}")
-                    return@mapNotNull null
-                }
-                element.doEncji(kategoriaId)
-            }
+            val produkty = zbudujProduktyZSeeda(idKategoriiPoNazwie)
             produktyDao.wstawWszystkie(produkty)
             Log.i(TAG, "Zaseedowano ${idKategoriiPoNazwie.size} kategorii i ${produkty.size} produktów")
         }
     }
+
+    /**
+     * Wczytuje przykladowa (demonstracyjna) baze produktow na zadanie uzytkownika
+     * (np. po wyzerowaniu bazy). W przeciwienstwie do [zaseeduj] nie zaklada pustej
+     * bazy - dopisuje brakujace kategorie startowe (bez duplikowania istniejacych)
+     * i dodaje produkty z seed.json do obecnej zawartosci bazy.
+     */
+    suspend fun wczytajDemo(): Int = database.withTransaction {
+        val kategorieDao = database.kategoriaDao()
+        val produktyDao = database.produktDao()
+
+        val istniejace = kategorieDao.pobierzWszystkie().associateBy { it.nazwa }
+        val idKategoriiPoNazwie = mutableMapOf<String, Long>()
+        istniejace.forEach { (nazwa, kategoria) -> idKategoriiPoNazwie[nazwa] = kategoria.id }
+
+        val kolejnoscBazowa = istniejace.values.maxOfOrNull { it.kolejnosc + 1 } ?: 0
+        KATEGORIE_STARTOWE.forEachIndexed { indeks, nazwa ->
+            if (nazwa !in idKategoriiPoNazwie) {
+                val id = kategorieDao.wstaw(KategoriaEntity(nazwa = nazwa, kolejnosc = kolejnoscBazowa + indeks))
+                idKategoriiPoNazwie[nazwa] = id
+            }
+        }
+
+        val produkty = zbudujProduktyZSeeda(idKategoriiPoNazwie)
+        produktyDao.wstawWszystkie(produkty)
+        Log.i(TAG, "Wczytano baze demonstracyjna: ${produkty.size} produktów")
+        produkty.size
+    }
+
+    private fun zbudujProduktyZSeeda(idKategoriiPoNazwie: Map<String, Long>) =
+        wczytajSeed().mapNotNull { element ->
+            val nazwaKategorii = MAPOWANIE_KATEGORII_SEEDA[element.kategoria] ?: element.kategoria
+            val kategoriaId = idKategoriiPoNazwie[nazwaKategorii]
+            if (kategoriaId == null) {
+                Log.w(TAG, "Pominięto produkt \"${element.kosmetyk}\" — nieznana kategoria: ${element.kategoria}")
+                return@mapNotNull null
+            }
+            element.doEncji(kategoriaId)
+        }
 
     private fun wczytajSeed(): List<SeedProdukt> {
         val tekst = context.assets.open("seed.json").bufferedReader(Charsets.UTF_8).use { it.readText() }

@@ -78,6 +78,7 @@ import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.StatusKolorowy
 import pl.bochynski.kosmetyki.data.repository.TrybMotywu
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
+import pl.bochynski.kosmetyki.data.seed.DatabaseSeeder
 import java.time.LocalDate
 
 @Composable
@@ -85,11 +86,14 @@ fun UstawieniaRoute(
     ustawieniaRepository: UstawieniaRepository,
     produktRepository: ProduktRepository,
     kategoriaRepository: KategoriaRepository,
+    databaseSeeder: DatabaseSeeder,
     naWstecz: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val viewModel: UstawieniaViewModel = viewModel(
-        factory = UstawieniaViewModelFactory(ustawieniaRepository, produktRepository, kategoriaRepository)
+        factory = UstawieniaViewModelFactory(
+            ustawieniaRepository, produktRepository, kategoriaRepository, databaseSeeder
+        )
     )
     val stan by viewModel.stan.collectAsState()
 
@@ -102,6 +106,7 @@ fun UstawieniaRoute(
         naWyzerujBaze = viewModel::wyzerujBaze,
         naEksportujDoPliku = viewModel::eksportujDoPliku,
         naImportujZPliku = viewModel::importujZPliku,
+        naWczytajBazeDemo = viewModel::wczytajBazeDemonstracyjna,
         naZamknijKomunikatBazy = viewModel::wyczyscKomunikatBazy,
         naZmianeAdresuSerwera = viewModel::ustawAdresSerwera,
         naZmianePortuSerwera = viewModel::ustawPortSerwera,
@@ -121,7 +126,8 @@ fun UstawieniaScreen(
     naZmianeKoloruStatusu: (StatusKolorowy, Int) -> Unit,
     naWyzerujBaze: () -> Unit,
     naEksportujDoPliku: (ContentResolver, Uri) -> Unit,
-    naImportujZPliku: (ContentResolver, Uri) -> Unit,
+    naImportujZPliku: (ContentResolver, Uri, TrybImportu) -> Unit,
+    naWczytajBazeDemo: () -> Unit,
     naZamknijKomunikatBazy: () -> Unit,
     naZmianeAdresuSerwera: (String) -> Unit,
     naZmianePortuSerwera: (String) -> Unit,
@@ -132,6 +138,7 @@ fun UstawieniaScreen(
     val context = LocalContext.current
     var uprawnienieWlaczone by remember { mutableStateOf(sprawdzUprawnienie(context)) }
     var pokazDialogResetu by remember { mutableStateOf(false) }
+    var oczekiwanyPlikImportu by remember { mutableStateOf<Uri?>(null) }
 
     val launcherEksportu = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -139,7 +146,7 @@ fun UstawieniaScreen(
 
     val launcherImportu = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
-    ) { uri -> if (uri != null) naImportujZPliku(context.contentResolver, uri) }
+    ) { uri -> if (uri != null) oczekiwanyPlikImportu = uri }
 
     DisposableEffect(Unit) {
         onDispose { naZamknijKomunikatBazy() }
@@ -340,7 +347,21 @@ fun UstawieniaScreen(
                         Text("Importuj z pliku")
                     }
                     Text(
-                        "Import dodaje produkty z pliku do obecnej bazy (nie nadpisuje istniejących danych).",
+                        "Po wybraniu pliku możesz zdecydować, czy dodać produkty do obecnej bazy, " +
+                            "czy nią zastąpić.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedButton(
+                        onClick = naWczytajBazeDemo,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !stan.trwaOperacjaBazy
+                    ) {
+                        Text("Wczytaj bazę demonstracyjną")
+                    }
+                    Text(
+                        "Dodaje przykładowe produkty (i domyślne kategorie, jeśli ich brakuje) do obecnej bazy.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -388,6 +409,38 @@ fun UstawieniaScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pokazDialogResetu = false }) { Text("Anuluj") }
+            }
+        )
+    }
+
+    oczekiwanyPlikImportu?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { oczekiwanyPlikImportu = null },
+            title = { Text("Jak zaimportować dane?") },
+            text = {
+                Text(
+                    "\"Dodaj do bazy\" dopisze produkty z pliku do obecnej zawartości. " +
+                        "\"Zastąp bazę\" najpierw trwale usunie wszystkie obecne produkty, " +
+                        "a dopiero potem wczyta dane z pliku. Tej drugiej operacji nie można cofnąć."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    naImportujZPliku(context.contentResolver, uri, TrybImportu.DODAJ)
+                    oczekiwanyPlikImportu = null
+                }) { Text("Dodaj do bazy") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            naImportujZPliku(context.contentResolver, uri, TrybImportu.ZASTAP)
+                            oczekiwanyPlikImportu = null
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) { Text("Zastąp bazę") }
+                    TextButton(onClick = { oczekiwanyPlikImportu = null }) { Text("Anuluj") }
+                }
             }
         )
     }

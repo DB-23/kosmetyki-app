@@ -40,6 +40,7 @@ import pl.bochynski.kosmetyki.ui.pulpit.PulpitRoute
 import pl.bochynski.kosmetyki.ui.skaner.SkanerEanRoute
 import pl.bochynski.kosmetyki.ui.sprawdzkod.SprawdzKodRoute
 import pl.bochynski.kosmetyki.ui.sprawdzkod.SprawdzKodWejscieRoute
+import pl.bochynski.kosmetyki.data.seed.DatabaseSeeder
 import pl.bochynski.kosmetyki.ui.ustawienia.UstawieniaRoute
 import pl.bochynski.kosmetyki.ui.zapasy.ZapasyRoute
 
@@ -92,6 +93,7 @@ fun KosmetykiNavHost(
     kategoriaRepository: KategoriaRepository,
     produktRepository: ProduktRepository,
     ustawieniaRepository: UstawieniaRepository,
+    databaseSeeder: DatabaseSeeder,
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
@@ -164,6 +166,7 @@ fun KosmetykiNavHost(
                     ustawieniaRepository = ustawieniaRepository,
                     produktRepository = produktRepository,
                     kategoriaRepository = kategoriaRepository,
+                    databaseSeeder = databaseSeeder,
                     naWstecz = { navController.popBackStack() }
                 )
             }

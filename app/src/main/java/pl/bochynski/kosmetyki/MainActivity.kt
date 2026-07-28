@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
                     kategoriaRepository = aplikacja.kategoriaRepository,
                     produktRepository = aplikacja.produktRepository,
                     ustawieniaRepository = aplikacja.ustawieniaRepository,
+                    databaseSeeder = aplikacja.databaseSeeder,
                     modifier = Modifier.fillMaxSize()
                 )
             }

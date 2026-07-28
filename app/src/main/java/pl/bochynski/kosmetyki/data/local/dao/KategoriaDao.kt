@@ -11,6 +11,9 @@ interface KategoriaDao {
     @Query("SELECT * FROM kategorie ORDER BY kolejnosc ASC")
     fun obserwujWszystkie(): Flow<List<KategoriaEntity>>
 
+    @Query("SELECT * FROM kategorie ORDER BY kolejnosc ASC")
+    suspend fun pobierzWszystkie(): List<KategoriaEntity>
+
     @Insert
     suspend fun wstaw(kategoria: KategoriaEntity): Long
 

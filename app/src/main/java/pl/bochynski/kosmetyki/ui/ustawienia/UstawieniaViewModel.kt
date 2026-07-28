@@ -22,6 +22,9 @@ import pl.bochynski.kosmetyki.data.repository.ProduktRepository
 import pl.bochynski.kosmetyki.data.repository.StatusKolorowy
 import pl.bochynski.kosmetyki.data.repository.TrybMotywu
 import pl.bochynski.kosmetyki.data.repository.UstawieniaRepository
+import pl.bochynski.kosmetyki.data.seed.DatabaseSeeder
+
+enum class TrybImportu { DODAJ, ZASTAP }
 
 data class UstawieniaUiState(
     val progDniTekst: String = "",
@@ -37,7 +40,8 @@ data class UstawieniaUiState(
 class UstawieniaViewModel(
     private val ustawieniaRepository: UstawieniaRepository,
     private val produktRepository: ProduktRepository,
-    private val kategoriaRepository: KategoriaRepository
+    private val kategoriaRepository: KategoriaRepository,
+    private val databaseSeeder: DatabaseSeeder
 ) : ViewModel() {
 
     private val _stan = MutableStateFlow(UstawieniaUiState())
@@ -138,7 +142,7 @@ class UstawieniaViewModel(
         }
     }
 
-    fun importujZPliku(resolver: ContentResolver, uri: Uri) {
+    fun importujZPliku(resolver: ContentResolver, uri: Uri, tryb: TrybImportu) {
         _stan.update { it.copy(trwaOperacjaBazy = true, komunikatBazy = null) }
         viewModelScope.launch {
             val wynik = runCatching {
@@ -148,6 +152,9 @@ class UstawieniaViewModel(
                 }
                 val kategorie = kategoriaRepository.obserwujKategorie().first()
                 val odczyt = KopiaZapasowaProduktow.odczytaj(tekst, kategorie)
+                if (tryb == TrybImportu.ZASTAP) {
+                    produktRepository.usunWszystkie()
+                }
                 if (odczyt.produkty.isNotEmpty()) {
                     produktRepository.dodajWiele(odczyt.produkty)
                 }
@@ -158,7 +165,12 @@ class UstawieniaViewModel(
                     trwaOperacjaBazy = false,
                     komunikatBazy = wynik.fold(
                         onSuccess = { odczyt ->
-                            val podstawowy = "Zaimportowano ${odczyt.produkty.size} produktów."
+                            val czynnosc = if (tryb == TrybImportu.ZASTAP) {
+                                "Zastąpiono bazę"
+                            } else {
+                                "Zaimportowano"
+                            }
+                            val podstawowy = "$czynnosc ${odczyt.produkty.size} produktów."
                             if (odczyt.pominieteBrakKategorii > 0) {
                                 "$podstawowy Pominięto ${odczyt.pominieteBrakKategorii} " +
                                     "(nierozpoznana kategoria)."
@@ -173,16 +185,33 @@ class UstawieniaViewModel(
         }
     }
 
+    fun wczytajBazeDemonstracyjna() {
+        _stan.update { it.copy(trwaOperacjaBazy = true, komunikatBazy = null) }
+        viewModelScope.launch {
+            val wynik = runCatching { databaseSeeder.wczytajDemo() }
+            _stan.update {
+                it.copy(
+                    trwaOperacjaBazy = false,
+                    komunikatBazy = wynik.fold(
+                        onSuccess = { liczba -> "Wczytano bazę demonstracyjną: $liczba produktów." },
+                        onFailure = { blad -> "Wczytanie bazy demonstracyjnej nie powiodło się: ${blad.message}" }
+                    )
+                )
+            }
+        }
+    }
+
     fun wyczyscKomunikatBazy() = _stan.update { it.copy(komunikatBazy = null) }
 }
 
 class UstawieniaViewModelFactory(
     private val ustawieniaRepository: UstawieniaRepository,
     private val produktRepository: ProduktRepository,
-    private val kategoriaRepository: KategoriaRepository
+    private val kategoriaRepository: KategoriaRepository,
+    private val databaseSeeder: DatabaseSeeder
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return UstawieniaViewModel(ustawieniaRepository, produktRepository, kategoriaRepository) as T
+        return UstawieniaViewModel(ustawieniaRepository, produktRepository, kategoriaRepository, databaseSeeder) as T
     }
 }
