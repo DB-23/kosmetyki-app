@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import pl.bochynski.kosmetyki.data.backup.KopiaZapasowaProduktow
+import pl.bochynski.kosmetyki.data.local.entity.KategoriaEntity
 import pl.bochynski.kosmetyki.data.repository.DOMYSLNE_KOLORY_STATUSOW
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.KoloryStatusow
@@ -32,6 +33,8 @@ data class UstawieniaUiState(
     val trybMotywu: TrybMotywu = TrybMotywu.SYSTEMOWY,
     val koloryStatusow: KoloryStatusow = DOMYSLNE_KOLORY_STATUSOW,
     val konfiguracjaSerwera: KonfiguracjaSerweraBazy = KonfiguracjaSerweraBazy(),
+    val kategorie: List<KategoriaEntity> = emptyList(),
+    val bladKategorii: String? = null,
     val trwaLadowanie: Boolean = true,
     val trwaOperacjaBazy: Boolean = false,
     val komunikatBazy: String? = null
@@ -67,7 +70,24 @@ class UstawieniaViewModel(
                 _stan.update { it.copy(konfiguracjaSerwera = konfiguracja) }
             }
         }
+        viewModelScope.launch {
+            kategoriaRepository.obserwujKategorie().collect { kategorie ->
+                _stan.update { it.copy(kategorie = kategorie) }
+            }
+        }
     }
+
+    fun dodajKategorie(nazwa: String) {
+        if (nazwa.isBlank()) return
+        viewModelScope.launch {
+            val dodano = kategoriaRepository.dodaj(nazwa)
+            _stan.update {
+                it.copy(bladKategorii = if (dodano) null else "Kategoria o tej nazwie już istnieje")
+            }
+        }
+    }
+
+    fun wyczyscBladKategorii() = _stan.update { it.copy(bladKategorii = null) }
 
     fun ustawProgDni(wartosc: String) {
         _stan.update { it.copy(progDniTekst = wartosc) }
@@ -109,9 +129,15 @@ class UstawieniaViewModel(
     fun wyzerujBaze() {
         _stan.update { it.copy(trwaOperacjaBazy = true, komunikatBazy = null) }
         viewModelScope.launch {
-            produktRepository.usunWszystkie()
+            val wynik = runCatching { produktRepository.usunWszystkie() }
             _stan.update {
-                it.copy(trwaOperacjaBazy = false, komunikatBazy = "Baza danych została wyzerowana.")
+                it.copy(
+                    trwaOperacjaBazy = false,
+                    komunikatBazy = wynik.fold(
+                        onSuccess = { "Baza danych została wyzerowana." },
+                        onFailure = { blad -> "Zerowanie bazy nie powiodło się: ${blad.message}" }
+                    )
+                )
             }
         }
     }

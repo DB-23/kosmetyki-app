@@ -35,6 +35,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +71,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.bochynski.kosmetyki.data.local.entity.KategoriaEntity
 import pl.bochynski.kosmetyki.data.repository.DOMYSLNE_KOLORY_STATUSOW
 import pl.bochynski.kosmetyki.data.repository.KategoriaRepository
 import pl.bochynski.kosmetyki.data.repository.KoloryStatusow
@@ -112,6 +114,8 @@ fun UstawieniaRoute(
         naZmianePortuSerwera = viewModel::ustawPortSerwera,
         naZmianeNazwyUzytkownikaSerwera = viewModel::ustawNazweUzytkownikaSerwera,
         naZmianeHaslaSerwera = viewModel::ustawHasloSerwera,
+        naDodajKategorie = viewModel::dodajKategorie,
+        naZamknijBladKategorii = viewModel::wyczyscBladKategorii,
         modifier = modifier
     )
 }
@@ -133,6 +137,8 @@ fun UstawieniaScreen(
     naZmianePortuSerwera: (String) -> Unit,
     naZmianeNazwyUzytkownikaSerwera: (String) -> Unit,
     naZmianeHaslaSerwera: (String) -> Unit,
+    naDodajKategorie: (String) -> Unit,
+    naZamknijBladKategorii: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -304,6 +310,13 @@ fun UstawieniaScreen(
                 }
             }
 
+            KartaKategorii(
+                kategorie = stan.kategorie,
+                blad = stan.bladKategorii,
+                naDodaj = naDodajKategorie,
+                naZamknijBlad = naZamknijBladKategorii
+            )
+
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier
@@ -453,6 +466,67 @@ fun UstawieniaScreen(
             naWybierz = { kolor -> naZmianeKoloruStatusu(status, kolor) },
             onDismiss = { edytowanyStatus = null }
         )
+    }
+}
+
+@Composable
+private fun KartaKategorii(
+    kategorie: List<KategoriaEntity>,
+    blad: String?,
+    naDodaj: (String) -> Unit,
+    naZamknijBlad: () -> Unit
+) {
+    var nowaKategoria by remember { mutableStateOf("") }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("Kategorie", style = MaterialTheme.typography.titleMedium)
+
+            Column {
+                kategorie.forEach { kategoria ->
+                    Text(
+                        kategoria.nazwa,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(vertical = 6.dp)
+                    )
+                    HorizontalDivider()
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = nowaKategoria,
+                    onValueChange = {
+                        nowaKategoria = it
+                        naZamknijBlad()
+                    },
+                    label = { Text("Nowa kategoria") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+                Button(
+                    onClick = {
+                        naDodaj(nowaKategoria)
+                        nowaKategoria = ""
+                    },
+                    enabled = nowaKategoria.isNotBlank()
+                ) {
+                    Text("Dodaj")
+                }
+            }
+            blad?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+        }
     }
 }
 
