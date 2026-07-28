@@ -89,6 +89,31 @@ class UstawieniaViewModel(
 
     fun wyczyscBladKategorii() = _stan.update { it.copy(bladKategorii = null) }
 
+    fun zmienNazweKategorii(kategoria: KategoriaEntity, nowaNazwa: String) {
+        viewModelScope.launch {
+            val powiodlo = kategoriaRepository.zmienNazwe(kategoria, nowaNazwa)
+            _stan.update {
+                it.copy(bladKategorii = if (powiodlo) null else "Kategoria o tej nazwie już istnieje")
+            }
+        }
+    }
+
+    fun usunKategorie(kategoria: KategoriaEntity) {
+        viewModelScope.launch {
+            val liczbaProduktow = kategoriaRepository.usun(kategoria)
+            _stan.update {
+                it.copy(
+                    bladKategorii = if (liczbaProduktow > 0) {
+                        "Nie można usunąć „${kategoria.nazwa}” — jest używana przez " +
+                            "$liczbaProduktow produktów"
+                    } else {
+                        null
+                    }
+                )
+            }
+        }
+    }
+
     fun ustawProgDni(wartosc: String) {
         _stan.update { it.copy(progDniTekst = wartosc) }
         val liczba = wartosc.trim().toIntOrNull()

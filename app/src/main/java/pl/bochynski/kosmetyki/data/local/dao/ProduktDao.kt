@@ -38,6 +38,9 @@ interface ProduktDao {
     @Query("SELECT COUNT(*) FROM produkty")
     suspend fun liczbaProduktow(): Int
 
+    @Query("SELECT COUNT(*) FROM produkty WHERE kategoriaId = :kategoriaId")
+    suspend fun liczbaWgKategorii(kategoriaId: Long): Int
+
     @Query(
         "SELECT DISTINCT miejsceZakupu FROM produkty " +
             "WHERE miejsceZakupu IS NOT NULL ORDER BY miejsceZakupu"

@@ -25,7 +25,9 @@ class KosmetykiApplication : Application(), Configuration.Provider {
 
     private val baza: AppDatabase by lazy { AppDatabase.pobierzInstancje(this, zasiegAplikacji) }
 
-    val kategoriaRepository: KategoriaRepository by lazy { KategoriaRepositoryImpl(baza.kategoriaDao()) }
+    val kategoriaRepository: KategoriaRepository by lazy {
+        KategoriaRepositoryImpl(baza.kategoriaDao(), baza.produktDao())
+    }
     val produktRepository: ProduktRepository by lazy { ProduktRepositoryImpl(baza.produktDao()) }
     val ustawieniaRepository: UstawieniaRepository by lazy { UstawieniaRepositoryImpl(this) }
     val databaseSeeder: DatabaseSeeder by lazy { DatabaseSeeder(this, baza) }

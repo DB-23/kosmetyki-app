@@ -27,6 +27,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -115,6 +117,8 @@ fun UstawieniaRoute(
         naZmianeNazwyUzytkownikaSerwera = viewModel::ustawNazweUzytkownikaSerwera,
         naZmianeHaslaSerwera = viewModel::ustawHasloSerwera,
         naDodajKategorie = viewModel::dodajKategorie,
+        naZmienNazweKategorii = viewModel::zmienNazweKategorii,
+        naUsunKategorie = viewModel::usunKategorie,
         naZamknijBladKategorii = viewModel::wyczyscBladKategorii,
         modifier = modifier
     )
@@ -138,6 +142,8 @@ fun UstawieniaScreen(
     naZmianeNazwyUzytkownikaSerwera: (String) -> Unit,
     naZmianeHaslaSerwera: (String) -> Unit,
     naDodajKategorie: (String) -> Unit,
+    naZmienNazweKategorii: (KategoriaEntity, String) -> Unit,
+    naUsunKategorie: (KategoriaEntity) -> Unit,
     naZamknijBladKategorii: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -314,6 +320,8 @@ fun UstawieniaScreen(
                 kategorie = stan.kategorie,
                 blad = stan.bladKategorii,
                 naDodaj = naDodajKategorie,
+                naZmienNazwe = naZmienNazweKategorii,
+                naUsun = naUsunKategorie,
                 naZamknijBlad = naZamknijBladKategorii
             )
 
@@ -474,9 +482,13 @@ private fun KartaKategorii(
     kategorie: List<KategoriaEntity>,
     blad: String?,
     naDodaj: (String) -> Unit,
+    naZmienNazwe: (KategoriaEntity, String) -> Unit,
+    naUsun: (KategoriaEntity) -> Unit,
     naZamknijBlad: () -> Unit
 ) {
     var nowaKategoria by remember { mutableStateOf("") }
+    var edytowanaKategoria by remember { mutableStateOf<KategoriaEntity?>(null) }
+    var kategoriaDoUsuniecia by remember { mutableStateOf<KategoriaEntity?>(null) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -489,11 +501,35 @@ private fun KartaKategorii(
 
             Column {
                 kategorie.forEach { kategoria ->
-                    Text(
-                        kategoria.nazwa,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(vertical = 6.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            kategoria.nazwa,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = 6.dp)
+                        )
+                        IconButton(onClick = {
+                            naZamknijBlad()
+                            edytowanaKategoria = kategoria
+                        }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Zmień nazwę kategorii ${kategoria.nazwa}")
+                        }
+                        IconButton(onClick = {
+                            naZamknijBlad()
+                            kategoriaDoUsuniecia = kategoria
+                        }) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = "Usuń kategorię ${kategoria.nazwa}",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                     HorizontalDivider()
                 }
             }
@@ -528,6 +564,74 @@ private fun KartaKategorii(
             }
         }
     }
+
+    edytowanaKategoria?.let { kategoria ->
+        DialogZmianyNazwyKategorii(
+            kategoria = kategoria,
+            naZatwierdz = { nowaNazwa -> naZmienNazwe(kategoria, nowaNazwa) },
+            onDismiss = { edytowanaKategoria = null }
+        )
+    }
+
+    kategoriaDoUsuniecia?.let { kategoria ->
+        AlertDialog(
+            onDismissRequest = { kategoriaDoUsuniecia = null },
+            title = { Text("Usunąć kategorię?") },
+            text = {
+                Text(
+                    "Kategoria „${kategoria.nazwa}” zostanie trwale usunięta. " +
+                        "Nie da się jej usunąć, jeśli używa jej choć jeden produkt."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        naUsun(kategoria)
+                        kategoriaDoUsuniecia = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Usuń") }
+            },
+            dismissButton = {
+                TextButton(onClick = { kategoriaDoUsuniecia = null }) { Text("Anuluj") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun DialogZmianyNazwyKategorii(
+    kategoria: KategoriaEntity,
+    naZatwierdz: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var nazwa by remember { mutableStateOf(kategoria.nazwa) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Zmień nazwę kategorii") },
+        text = {
+            OutlinedTextField(
+                value = nazwa,
+                onValueChange = { nazwa = it },
+                label = { Text("Nazwa kategorii") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    naZatwierdz(nazwa)
+                    onDismiss()
+                },
+                enabled = nazwa.isNotBlank()
+            ) { Text("Zapisz") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Anuluj") }
+        }
+    )
 }
 
 @Composable
